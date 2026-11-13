@@ -9,7 +9,24 @@ const { Store } = require('./store');
 
 const PROGRESS_INTERVAL_MS = 10 * 1000;
 
-if (process.env.JMP_DATA_DIR) app.setPath('userData', path.resolve(process.env.JMP_DATA_DIR));
+/** The portable exe keeps its data in "Tonefin-data" next to itself, if that folder can be written to. */
+function portableDataDir() {
+  const exeDir = process.env.PORTABLE_EXECUTABLE_DIR;
+  if (!exeDir) return null;
+  const dir = path.join(exeDir, 'Tonefin-data');
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, '.write-test');
+    fs.writeFileSync(probe, '');
+    fs.unlinkSync(probe);
+    return dir;
+  } catch {
+    return null; // e.g. under Program Files: fall back to %APPDATA%\Tonefin
+  }
+}
+
+const dataDir = process.env.JMP_DATA_DIR ? path.resolve(process.env.JMP_DATA_DIR) : portableDataDir();
+if (dataDir) app.setPath('userData', dataDir);
 
 /**
  * Before 0.1.0 was released the app was called "Jellyfin Music Player": keep its login and device id.

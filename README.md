@@ -32,7 +32,7 @@ Reporting runs in the app's main process, which is never throttled when the wind
 
 ### Running
 
-Download `Tonefin-<version>-portable.exe` and start it. It isn't code-signed, so Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Settings and the log are stored in `%APPDATA%\Tonefin`.
+Download `Tonefin-<version>-portable.exe` and start it. It isn't code-signed, so Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Settings, the login and the log are stored in a `Tonefin-data` folder next to the exe, so the whole app can be moved or deleted as one folder. If that folder can't be written to (for example under Program Files), `%APPDATA%\Tonefin` is used instead.
 
 ### Development
 
@@ -73,7 +73,7 @@ Rapporteringen kører i appens hovedproces, som aldrig bliver sat ned i fart, n�
 
 ### Kør den
 
-Hent `Tonefin-<version>-portable.exe` og start den. Den er ikke kodesigneret, så Windows SmartScreen beder dig måske bekræfte første gang (**Flere oplysninger → Kør alligevel**). Indstillinger og log gemmes i `%APPDATA%\Tonefin`.
+Hent `Tonefin-<version>-portable.exe` og start den. Den er ikke kodesigneret, så Windows SmartScreen beder dig måske bekræfte første gang (**Flere oplysninger → Kør alligevel**). Indstillinger, login og log gemmes i mappen `Tonefin-data` ved siden af exe'en, så hele appen kan flyttes eller slettes som én mappe. Kan der ikke skrives i den mappe (fx under Program Files), bruges `%APPDATA%\Tonefin` i stedet.
 
 ### Udvikling
 

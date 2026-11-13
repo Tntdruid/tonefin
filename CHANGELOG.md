@@ -14,6 +14,7 @@
 - Reports playback to Jellyfin (`Playing`, `Progress` every 10 seconds, `Stopped`) from the main process, retries failed reports, delivers missed stop reports later and announces playback again after sleep or network failures
 - Shows in the sidebar whether reporting works, with a log file one click away
 - Media keys and the Windows media overlay
+- Keeps its settings, login and log in `Tonefin-data` next to the exe
 - Falls back to MP3 transcoding for formats the player can't decode, and restarts a broken stream from the same position
 
 🇩🇰
@@ -26,4 +27,5 @@
 - Rapporterer afspilning til Jellyfin (`Playing`, `Progress` hvert 10. sekund, `Stopped`) fra hovedprocessen, prøver fejlede rapporter igen, leverer manglende stop-rapporter senere og annoncerer afspilningen igen efter dvale eller netværksfejl
 - Viser i sidepanelet, om rapporteringen virker, med logfilen et klik væk
 - Medietaster og Windows' medieoverlay
+- Gemmer indstillinger, login og log i `Tonefin-data` ved siden af exe'en
 - Skifter til MP3-konvertering for formater, afspilleren ikke kan afkode, og genstarter en afbrudt lydstrøm fra samme sted
