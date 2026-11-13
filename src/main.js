@@ -123,17 +123,38 @@ app.whenReady().then(() => {
 
   ipcMain.handle('session:get', () => sessionInfo());
 
-  ipcMain.handle('session:login', async (_e, { server: input, username, password }) => {
-    const server = normalizeServer(input);
-    const c = makeClient(server, null);
-    const res = await c.login(username, password);
+  async function finishLogin(c, res, how) {
     if (client && client.token) await reporter.stop();
     client = c;
-    store.set({ server, userId: res.userId, userName: res.userName, lastUsername: username });
+    store.set({ server: c.server, userId: res.userId, userName: res.userName, lastUsername: res.userName });
     store.token = res.token;
-    log(`logged in to ${server} as ${res.userName}`);
+    log(`logged in to ${c.server} as ${res.userName} (${how})`);
     announce('login');
     return sessionInfo();
+  }
+
+  ipcMain.handle('session:login', async (_e, { server: input, username, password }) => {
+    const c = makeClient(normalizeServer(input), null);
+    return finishLogin(c, await c.login(username, password), 'password');
+  });
+
+  // Quick Connect ("Lyn-forbind"): start gives a code, the renderer polls check until it is approved.
+  let quick = null;
+  ipcMain.handle('quick:start', async (_e, input) => {
+    const c = makeClient(normalizeServer(input), null);
+    const { code, secret } = await c.quickConnectStart();
+    quick = { client: c, secret };
+    return code;
+  });
+  ipcMain.handle('quick:check', async () => {
+    if (!quick) throw new Error('Lyn-forbind er ikke startet');
+    if (!(await quick.client.quickConnectAuthorized(quick.secret))) return null;
+    const { client: c, secret } = quick;
+    quick = null;
+    return finishLogin(c, await c.quickConnectFinish(secret), 'quick connect');
+  });
+  ipcMain.handle('quick:cancel', () => {
+    quick = null;
   });
 
   ipcMain.handle('session:logout', async () => {

@@ -11,6 +11,7 @@ const port = Number(process.argv[2] || 8097);
 const TICKS = 10_000_000;
 const reports = [];
 let down = false;
+let quickApproved = false; // GET /__approve approves the Quick Connect code
 const nowPlaying = {};
 
 const album = { Id: 'alb1', Name: 'Testalbum', Type: 'MusicAlbum', AlbumArtist: 'Testkunstner', AlbumArtists: [{ Id: 'art1', Name: 'Testkunstner' }], ProductionYear: 2024, ImageTags: {} };
@@ -67,6 +68,12 @@ http
     if (p.startsWith('/Sessions') && down) return req.socket.destroy();
 
     if (p === '/System/Info/Public') return json(res, { ServerName: 'Mock', Version: '10.11.0' });
+    if (p === '/__approve') return json(res, (quickApproved = true));
+    if (p === '/QuickConnect/Enabled') return json(res, true);
+    if (p === '/QuickConnect/Initiate') return json(res, (quickApproved = false) || { Code: '123456', Secret: 'qcsecret' });
+    if (p === '/QuickConnect/Connect') return json(res, { Code: '123456', Secret: q.Secret, Authenticated: quickApproved });
+    if (p === '/Users/AuthenticateWithQuickConnect')
+      return quickApproved ? json(res, { AccessToken: 'mocktoken', User: { Id: 'u1', Name: 'Tester' } }) : res.writeHead(401).end();
     if (p === '/Users/AuthenticateByName') return json(res, { AccessToken: 'mocktoken', User: { Id: 'u1', Name: 'Tester' } });
     if (p === '/Sessions/Capabilities/Full' || p === '/Sessions/Logout') return res.writeHead(204).end();
     if (p.startsWith('/Sessions/Playing')) {

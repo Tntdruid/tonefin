@@ -11,6 +11,7 @@
 A small music player for Windows that plays music from a Jellyfin server and **always reports playback back to Jellyfin**: "now playing", progress every 10 seconds, pause and stop. It was made because Jellyfin Media Player often stops reporting (after sleep or a network change), so plays and skips go missing in [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) and in Jellyfin's own dashboard. The app itself is in Danish.
 
 - Log in with server address, username and password. The password is not stored; only the access token Jellyfin hands out, encrypted with Windows (DPAPI).
+- Or log in with Quick Connect: the app shows a code, which you approve in Jellyfin in the browser or on your phone under **User menu → Quick Connect**
 - Browse albums, artists, songs and playlists, and search
 - Play an album, artist or playlist with a queue: next/previous, pause, seeking, shuffle, "play next" and "add to queue"
 - Album cover and a "now playing" page with the queue
@@ -51,6 +52,7 @@ npm run dist       # build dist/JellyfinMusicPlayer-<version>-portable.exe
 En lille musikafspiller til Windows, der spiller musik fra en Jellyfin-server og **altid rapporterer afspilningen tilbage til Jellyfin**: "spiller nu", fremskridt hvert 10. sekund, pause og stop. Den er lavet, fordi Jellyfin Media Player tit holder op med at rapportere (efter dvale eller netværksskift), så lytninger og skips forsvinder i [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) og i Jellyfins eget kontrolpanel.
 
 - Log ind med serveradresse, brugernavn og kodeord. Kodeordet gemmes ikke, kun den adgangsnøgle Jellyfin giver, krypteret med Windows (DPAPI).
+- Eller log ind med Lyn-forbind: appen viser en kode, som du godkender i Jellyfin i browseren eller på telefonen under **Brugermenu → Lyn-forbind**
 - Gennemse albums, kunstnere, sange og playlister, og søg
 - Afspil et album, en kunstner eller en playliste med kø: næste/forrige, pause, spoling, bland, "afspil som næste" og "tilføj til kø"
 - Albumcover og en "Spiller nu"-side med køen

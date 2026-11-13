@@ -119,6 +119,60 @@ $('#login-form').addEventListener('submit', async (e) => {
   }
 });
 
+// Quick Connect ("Lyn-forbind"): show a code, then poll until it is approved in another Jellyfin app.
+let quickTimer = null;
+function stopQuick() {
+  clearTimeout(quickTimer);
+  quickTimer = null;
+  $('#quick-box').classList.add('hidden');
+  $('#quick-btn').classList.remove('hidden');
+  $('#login-form').classList.remove('quick-mode');
+}
+
+$('#quick-btn').addEventListener('click', async () => {
+  const btn = $('#quick-btn');
+  btn.disabled = true;
+  $('#login-error').textContent = '';
+  try {
+    const code = await jf.quickStart($('#login-server').value);
+    $('#quick-code').textContent = code;
+    $('#quick-box').classList.remove('hidden');
+    btn.classList.add('hidden');
+    $('#login-form').classList.add('quick-mode');
+    const started = Date.now();
+    const poll = async () => {
+      if (!quickTimer) return;
+      try {
+        const s = await jf.quickCheck();
+        if (s) {
+          stopQuick();
+          return startApp(s);
+        }
+      } catch (err) {
+        stopQuick();
+        $('#login-error').textContent = cleanError(err);
+        return;
+      }
+      if (Date.now() - started > 9 * 60 * 1000) {
+        stopQuick();
+        $('#login-error').textContent = 'Koden er udløbet. Prøv igen.';
+        return;
+      }
+      quickTimer = setTimeout(poll, 3000);
+    };
+    quickTimer = setTimeout(poll, 3000);
+  } catch (err) {
+    $('#login-error').textContent = cleanError(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('#quick-cancel').addEventListener('click', () => {
+  stopQuick();
+  jf.quickCancel();
+});
+
 $('#logout').addEventListener('click', async () => {
   player.clearQueue();
   await jf.logout();

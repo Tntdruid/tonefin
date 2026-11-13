@@ -13,9 +13,17 @@
       <img src="../../assets/icon.png" alt="" class="login-logo">
       <h1>Jellyfin Music Player</h1>
       <label>Server<input id="login-server" placeholder="http://10.10.1.33:8096" autocomplete="url" required></label>
-      <label>Brugernavn<input id="login-user" autocomplete="username" required></label>
-      <label>Kodeord<input id="login-pass" type="password" autocomplete="current-password"></label>
-      <button type="submit" id="login-btn">Log ind</button>
+      <label class="pw">Brugernavn<input id="login-user" autocomplete="username" required></label>
+      <label class="pw">Kodeord<input id="login-pass" type="password" autocomplete="current-password"></label>
+      <button type="submit" id="login-btn" class="primary">Log ind</button>
+      <div class="or muted small">eller</div>
+      <button type="button" id="quick-btn">Log ind med Lyn-forbind</button>
+      <div id="quick-box" class="quick hidden">
+        <div class="muted small">Din kode til Lyn-forbind</div>
+        <div id="quick-code" class="quick-code"></div>
+        <p class="muted small">Åbn Jellyfin i browseren eller på telefonen, hvor du er logget ind. Gå til <b>Brugermenu → Lyn-forbind</b>, skriv koden og tryk <b>Tillad</b>. Appen logger selv ind bagefter.</p>
+        <button type="button" id="quick-cancel" class="link muted">Annullér</button>
+      </div>
       <p id="login-error" class="error"></p>
       <p class="muted small">Kodeordet gemmes ikke. Appen husker kun den adgangsnøgle, Jellyfin giver ved login.</p>
     </form>

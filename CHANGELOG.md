@@ -7,6 +7,7 @@
 🇬🇧
 - First version: a portable Windows music player for Jellyfin
 - Log in with server, username and password; the login is remembered (the password itself is never stored)
+- Log in with Quick Connect instead: the app shows a code you approve in another Jellyfin app
 - Browse albums, artists, songs and playlists, and search
 - Play albums, artists and playlists with a queue, next/previous, pause, seeking, shuffle, "play next" and "add to queue"
 - Album cover in the player bar and a "now playing" page with the queue
@@ -18,6 +19,7 @@
 🇩🇰
 - Første version: en portable musikafspiller til Windows til Jellyfin
 - Log ind med server, brugernavn og kodeord; login huskes (selve kodeordet gemmes aldrig)
+- Eller log ind med Lyn-forbind: appen viser en kode, du godkender i en anden Jellyfin-app
 - Gennemse albums, kunstnere, sange og playlister, og søg
 - Afspil albums, kunstnere og playlister med kø, næste/forrige, pause, spoling, bland, "afspil som næste" og "tilføj til kø"
 - Albumcover i afspillerlinjen og en "Spiller nu"-side med køen

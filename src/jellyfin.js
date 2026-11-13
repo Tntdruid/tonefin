@@ -88,6 +88,26 @@ class JellyfinClient {
     return { token: result.AccessToken, userId: result.User.Id, userName: result.User.Name };
   }
 
+  /** Starts a Quick Connect ("Lyn-forbind") login. Returns the code to type in another Jellyfin app. */
+  async quickConnectStart() {
+    await this.request('GET', '/System/Info/Public');
+    const enabled = await this.request('GET', '/QuickConnect/Enabled').catch(() => false);
+    if (enabled !== true) throw new JellyfinError('Lyn-forbind er slået fra på serveren', 0);
+    const res = await this.request('POST', '/QuickConnect/Initiate');
+    return { code: res.Code, secret: res.Secret };
+  }
+
+  async quickConnectAuthorized(secret) {
+    const res = await this.request('GET', '/QuickConnect/Connect', { query: { Secret: secret } });
+    return !!(res && res.Authenticated);
+  }
+
+  async quickConnectFinish(secret) {
+    const result = await this.request('POST', '/Users/AuthenticateWithQuickConnect', { body: { Secret: secret } });
+    this.token = result.AccessToken;
+    return { token: result.AccessToken, userId: result.User.Id, userName: result.User.Name };
+  }
+
   reportCapabilities() {
     return this.request('POST', '/Sessions/Capabilities/Full', {
       body: {
