@@ -249,7 +249,10 @@ class Player extends EventTarget {
       }
       this.reported = false;
       if (this.index + 1 < this.queue.length) this.playIndex(this.index + 1);
-      else this._emit('state');
+      else {
+        this._emit('state');
+        this._emit('queueend', item);
+      }
     });
     a.addEventListener('error', () => {
       const err = a.error;

@@ -2,6 +2,14 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.2.1
+
+🇬🇧
+- Hearts and playlists made on the server show up without restarting, e.g. from the Auto Artist Playlists plugin: the heart of the playing song is checked every 30 seconds and after each song, and the playlists in the sidebar are refreshed after a song ends
+
+🇩🇰
+- Hjerter og playlister, der laves på serveren, vises uden genstart, fx fra pluginet Auto Artist Playlists: hjertet på det nummer, der spiller, tjekkes hvert 30. sekund og efter hvert nummer, og playlisterne i sidepanelet opdateres, når et nummer slutter
+
 ## 0.2.0
 
 🇬🇧

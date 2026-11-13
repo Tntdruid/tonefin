@@ -337,12 +337,46 @@ function heart(item, cls = 'icon small') {
   return b;
 }
 
-function repaintHearts(id) {
-  const on = favOverride.get(id);
+function repaintHearts(id, on = favOverride.get(id)) {
   document.querySelectorAll(`[data-fav="${CSS.escape(id)}"]`).forEach((b) => paintHeart(b, on));
 }
 
+const favPending = new Set(); // hearts the user is changing right now
+
+/**
+ * Fetches the item's current favorite state from Jellyfin. Server plugins (such as Auto Artist Playlists)
+ * can set the heart while a song plays, so what was loaded with the queue goes stale.
+ */
+async function refreshFav(item) {
+  if (!item || !session || favPending.has(item.Id)) return;
+  try {
+    const fresh = await jf.api(`/Users/${session.userId}/Items/${item.Id}`, {});
+    if (favPending.has(item.Id) || !fresh || !fresh.UserData) return;
+    item.UserData = { ...(item.UserData || {}), IsFavorite: !!fresh.UserData.IsFavorite };
+    favOverride.set(item.Id, !!fresh.UserData.IsFavorite);
+    repaintHearts(item.Id);
+  } catch {
+    /* try again next time */
+  }
+}
+
+let playlistsRefreshedAt = 0;
+function refreshSidebarPlaylistsSoon() {
+  if (Date.now() - playlistsRefreshedAt < 60 * 1000) return;
+  playlistsRefreshedAt = Date.now();
+  setTimeout(loadSidebarPlaylists, 5000);
+}
+
 async function toggleFav(item) {
+  favPending.add(item.Id);
+  try {
+    await doToggleFav(item);
+  } finally {
+    favPending.delete(item.Id);
+  }
+}
+
+async function doToggleFav(item) {
   const on = !isFav(item);
   favOverride.set(item.Id, on);
   repaintHearts(item.Id);
@@ -640,8 +674,16 @@ function markPlaying() {
   document.querySelectorAll('#content .track[data-id]').forEach((r) => r.classList.toggle('playing', r.dataset.id === id));
 }
 
+let lastTrack = null;
 function updateTrack() {
   const t = player.current;
+  if (lastTrack && lastTrack !== t) {
+    // The server may have reacted to the finished track (heart, new artist playlist).
+    const prev = lastTrack;
+    setTimeout(() => refreshFav(prev), 3000);
+    refreshSidebarPlaylistsSoon();
+  }
+  lastTrack = t;
   $('#bar-title').textContent = t ? t.Name : 'Intet spiller';
   $('#bar-artist').textContent = t ? artistsOf(t) : '';
   const img = $('#bar-cover');
@@ -715,6 +757,10 @@ player.addEventListener('queue', () => {
   if (current && current.view === 'nowplaying') render();
 });
 player.addEventListener('error', (e) => toast(e.detail));
+player.addEventListener('queueend', (e) => {
+  setTimeout(() => refreshFav(e.detail), 3000);
+  refreshSidebarPlaylistsSoon();
+});
 
 $('#btn-play').addEventListener('click', () => player.toggle());
 $('#btn-next').addEventListener('click', () => player.next());
@@ -785,6 +831,11 @@ function showReportStatus(s) {
   node.title = s.ok ? `Sidst rapporteret ${time}` : `${s.lastError}\nSidst rapporteret ${time}`;
 }
 jf.onReportStatus(showReportStatus);
+
+// While something plays, pick up a heart set on the server (e.g. by a plugin once 70 % is played).
+setInterval(() => {
+  if (player.current && !player.audio.paused) refreshFav(player.current);
+}, 30 * 1000);
 jf.reportStatus().then(showReportStatus);
 
 window.addEventListener('online', () => {

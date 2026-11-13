@@ -73,6 +73,9 @@ http
     if (p.startsWith('/Sessions') && down) return req.socket.destroy();
 
     if (p === '/System/Info/Public') return json(res, { ServerName: 'Mock', Version: '10.11.0' });
+    // Act like a server plugin: heart a song, or create a playlist, behind the client's back.
+    if (p === '/__fav') return json(res, favorites.add(q.id).has(q.id));
+    if (p === '/__addplaylist') return json(res, playlists.push({ Id: 'pl3', Name: q.name || 'Testkunstner', Type: 'Playlist', MediaType: 'Audio', ImageTags: {} }));
     if (p === '/__approve') return json(res, (quickApproved = true));
     if (p === '/QuickConnect/Enabled') return json(res, true);
     if (p === '/QuickConnect/Initiate') return json(res, (quickApproved = false) || { Code: '123456', Secret: 'qcsecret' });
@@ -105,7 +108,7 @@ http
       if (q.IncludeItemTypes === 'Playlist') return list(playlists);
       return list([]);
     }
-    const one = [album, artist, ...playlists].find((i) => p === `/Users/u1/Items/${i.Id}`);
+    const one = [album, artist, ...tracks, ...playlists].find((i) => p === `/Users/u1/Items/${i.Id}`);
     if (one) return json(res, withUserData(one));
     if (p === '/Artists/AlbumArtists' || p === '/Artists') return list([artist]);
     if (p === '/Playlists/pl1/Items') return list([tracks[2], tracks[0]]);
