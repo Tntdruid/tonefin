@@ -2,6 +2,14 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.1.1
+
+🇬🇧
+- The volume slider follows how we hear loudness: low settings are now actually quiet (50 % is about -18 dB, 20 % about -42 dB) instead of almost as loud as full volume
+
+🇩🇰
+- Lydstyrke-slideren følger, hvordan øret opfatter lydstyrke: lave indstillinger er nu faktisk lave (50 % er cirka -18 dB, 20 % cirka -42 dB) i stedet for næsten lige så høje som fuld styrke
+
 ## 0.1.0
 
 🇬🇧

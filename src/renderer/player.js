@@ -121,8 +121,13 @@ class Player extends EventTarget {
     this.audio.currentTime = Math.max(0, seconds);
   }
 
+  /**
+   * v is the slider value 0–100. Hearing is logarithmic, so a linear volume makes 20 % sound almost as loud
+   * as 100 %. A cubic curve gives about -18 dB at 50 % and -42 dB at 20 %.
+   */
   setVolume(v) {
-    this.audio.volume = Math.min(1, Math.max(0, v / 100));
+    this.volumePct = Math.min(100, Math.max(0, Number(v) || 0));
+    this.audio.volume = Math.pow(this.volumePct / 100, 3);
   }
 
   get duration() {
@@ -198,7 +203,7 @@ class Player extends EventTarget {
       positionTicks: this._ticks(this.audio.currentTime),
       isPaused: this.audio.paused,
       isMuted: this.audio.muted,
-      volume: Math.round(this.audio.volume * 100),
+      volume: Math.round(this.volumePct ?? 100),
       shuffled: this.shuffled,
       event,
     };
