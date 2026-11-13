@@ -4,6 +4,8 @@
 
 <p align="center"><i>A music player for Jellyfin · En musikafspiller til Jellyfin</i></p>
 
+<p align="center"><a href="https://github.com/Tntdruid/tonefin/actions/workflows/ci.yaml"><img src="https://github.com/Tntdruid/tonefin/actions/workflows/ci.yaml/badge.svg" alt="CI"></a></p>
+
 🇬🇧 [English](#english) · 🇩🇰 [Dansk](#dansk)
 
 ---
