@@ -10,6 +10,28 @@ const { Store } = require('./store');
 const PROGRESS_INTERVAL_MS = 10 * 1000;
 
 if (process.env.JMP_DATA_DIR) app.setPath('userData', path.resolve(process.env.JMP_DATA_DIR));
+
+/**
+ * Before 0.1.0 was released the app was called "Jellyfin Music Player": keep its login and device id.
+ * "Local State" holds the key the token is encrypted with, so it has to come along, and it has to be
+ * copied before Chromium starts and creates its own.
+ */
+function migrateOldData() {
+  const newDir = app.getPath('userData');
+  const oldDir = process.env.JMP_OLD_DATA_DIR || path.join(app.getPath('appData'), 'Jellyfin Music Player');
+  if (fs.existsSync(path.join(newDir, 'settings.json')) || !fs.existsSync(path.join(oldDir, 'settings.json'))) return null;
+  try {
+    fs.mkdirSync(newDir, { recursive: true });
+    for (const f of ['Local State', 'settings.json']) {
+      if (fs.existsSync(path.join(oldDir, f))) fs.copyFileSync(path.join(oldDir, f), path.join(newDir, f));
+    }
+    return oldDir;
+  } catch {
+    return null;
+  }
+}
+const migratedFrom = migrateOldData();
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
@@ -66,7 +88,7 @@ function createWindow() {
     minWidth: 820,
     minHeight: 560,
     backgroundColor: '#14161c',
-    title: 'Jellyfin Music Player',
+    title: 'Tonefin',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -94,7 +116,8 @@ function createWindow() {
 app.whenReady().then(() => {
   logFile = path.join(app.getPath('userData'), 'player.log');
   store = new Store(path.join(app.getPath('userData'), 'settings.json'), safeStorage);
-  log(`Jellyfin Music Player ${app.getVersion()} starting on ${os.hostname()}`);
+  log(`Tonefin ${app.getVersion()} starting on ${os.hostname()}`);
+  if (migratedFrom) log(`kept login from ${migratedFrom}`);
 
   const server = store.get('server');
   const token = store.token;

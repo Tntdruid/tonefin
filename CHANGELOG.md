@@ -5,7 +5,7 @@
 ## 0.1.0
 
 🇬🇧
-- First version: a portable Windows music player for Jellyfin
+- First version of Tonefin: a portable Windows music player for Jellyfin
 - Log in with server, username and password; the login is remembered (the password itself is never stored)
 - Log in with Quick Connect instead: the app shows a code you approve in another Jellyfin app
 - Browse albums, artists, songs and playlists, and search
@@ -17,7 +17,7 @@
 - Falls back to MP3 transcoding for formats the player can't decode, and restarts a broken stream from the same position
 
 🇩🇰
-- Første version: en portable musikafspiller til Windows til Jellyfin
+- Første version af Tonefin: en portable musikafspiller til Windows til Jellyfin
 - Log ind med server, brugernavn og kodeord; login huskes (selve kodeordet gemmes aldrig)
 - Eller log ind med Lyn-forbind: appen viser en kode, du godkender i en anden Jellyfin-app
 - Gennemse albums, kunstnere, sange og playlister, og søg

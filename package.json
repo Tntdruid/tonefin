@@ -1,8 +1,8 @@
 {
-  "name": "jellyfin-music-player",
-  "productName": "Jellyfin Music Player",
+  "name": "tonefin",
+  "productName": "Tonefin",
   "version": "0.1.0",
-  "description": "A small Windows music player for Jellyfin that always reports playback to the server.",
+  "description": "Tonefin: a small Windows music player for Jellyfin that always reports playback to the server.",
   "main": "src/main.js",
   "author": "Tntdruid",
   "license": "MIT",
@@ -13,8 +13,8 @@
     "dist": "electron-builder --win portable"
   },
   "build": {
-    "appId": "dk.tntdruid.jellyfin-music-player",
-    "productName": "Jellyfin Music Player",
+    "appId": "dk.tntdruid.tonefin",
+    "productName": "Tonefin",
     "files": [
       "src/**/*",
       "assets/icon.png",
@@ -28,7 +28,7 @@
       "icon": "assets/icon.png"
     },
     "portable": {
-      "artifactName": "JellyfinMusicPlayer-${version}-portable.exe"
+      "artifactName": "Tonefin-${version}-portable.exe"
     }
   },
   "devDependencies": {

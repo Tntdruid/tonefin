@@ -134,3 +134,4 @@ h2 { font-size: 18px; margin: 26px 0 12px; }
 
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+.login-box .tagline { text-align: center; margin-top: -8px; }

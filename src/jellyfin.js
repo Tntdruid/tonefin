@@ -1,6 +1,6 @@
 'use strict';
 
-const CLIENT_NAME = 'Jellyfin Music Player';
+const CLIENT_NAME = 'Tonefin';
 
 /** Turns "10.10.1.33:8096/" into "http://10.10.1.33:8096". */
 function normalizeServer(input) {

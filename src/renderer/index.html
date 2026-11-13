@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; img-src 'self' data: http: https:; media-src http: https: blob:; style-src 'self'; script-src 'self'">
-  <title>Jellyfin Music Player</title>
+  <title>Tonefin</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <section id="login" class="login hidden">
     <form id="login-form" class="login-box">
       <img src="../../assets/icon.png" alt="" class="login-logo">
-      <h1>Jellyfin Music Player</h1>
+      <h1>Tonefin</h1>
+      <p class="muted small tagline">En musikafspiller til Jellyfin</p>
       <label>Server<input id="login-server" placeholder="http://10.10.1.33:8096" autocomplete="url" required></label>
       <label class="pw">Brugernavn<input id="login-user" autocomplete="username" required></label>
       <label class="pw">Kodeord<input id="login-pass" type="password" autocomplete="current-password"></label>
@@ -31,7 +32,7 @@
 
   <section id="app" class="app hidden">
     <aside class="sidebar">
-      <div class="brand"><img src="../../assets/icon.png" alt=""><span>Music Player</span></div>
+      <div class="brand"><img src="../../assets/icon.png" alt=""><span>Tonefin</span></div>
       <input id="search" type="search" placeholder="Søg…" autocomplete="off">
       <nav>
         <button data-nav="albums">Albums</button>

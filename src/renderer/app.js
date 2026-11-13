@@ -543,7 +543,7 @@ function updateTrack() {
   if (current && current.view === 'nowplaying') render();
   updateMediaSession();
   updateTime();
-  document.title = t ? `${t.Name} – ${artistsOf(t)}` : 'Jellyfin Music Player';
+  document.title = t ? `${t.Name} – ${artistsOf(t)}` : 'Tonefin';
 }
 
 let seeking = false;

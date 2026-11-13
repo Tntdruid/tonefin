@@ -1,6 +1,8 @@
-<p align="center"><img src="assets/icon.png" width="160" alt="Jellyfin Music Player logo"></p>
+<p align="center"><img src="assets/icon.png" width="160" alt="Tonefin logo"></p>
 
-<h1 align="center">Jellyfin Music Player</h1>
+<h1 align="center">Tonefin</h1>
+
+<p align="center"><i>A music player for Jellyfin · En musikafspiller til Jellyfin</i></p>
 
 🇬🇧 [English](#english) · 🇩🇰 [Dansk](#dansk)
 
@@ -8,7 +10,7 @@
 
 ## English
 
-A small music player for Windows that plays music from a Jellyfin server and **always reports playback back to Jellyfin**: "now playing", progress every 10 seconds, pause and stop. It was made because Jellyfin Media Player often stops reporting (after sleep or a network change), so plays and skips go missing in [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) and in Jellyfin's own dashboard. The app itself is in Danish.
+Tonefin is a small music player for Windows that plays music from a Jellyfin server and **always reports playback back to Jellyfin**: "now playing", progress every 10 seconds, pause and stop. It was made because Jellyfin Media Player often stops reporting (after sleep or a network change), so plays and skips go missing in [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) and in Jellyfin's own dashboard. The app itself is in Danish. Tonefin is an independent project and not affiliated with the Jellyfin project.
 
 - Log in with server address, username and password. The password is not stored; only the access token Jellyfin hands out, encrypted with Windows (DPAPI).
 - Or log in with Quick Connect: the app shows a code, which you approve in Jellyfin in the browser or on your phone under **User menu → Quick Connect**
@@ -30,7 +32,7 @@ Reporting runs in the app's main process, which is never throttled when the wind
 
 ### Running
 
-Download `JellyfinMusicPlayer-<version>-portable.exe` and start it. It isn't code-signed, so Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Settings and the log are stored in `%APPDATA%\Jellyfin Music Player`.
+Download `Tonefin-<version>-portable.exe` and start it. It isn't code-signed, so Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Settings and the log are stored in `%APPDATA%\Tonefin`.
 
 ### Development
 
@@ -40,7 +42,7 @@ Requires Node.js 20 or newer.
 npm install
 npm start          # run the app
 npm test           # unit tests for the reporting
-npm run dist       # build dist/JellyfinMusicPlayer-<version>-portable.exe
+npm run dist       # build dist/Tonefin-<version>-portable.exe
 ```
 
 `node dev/mock-jellyfin.js` starts a fake Jellyfin on port 8097 with one album, for trying the app and watching exactly what it reports. `GET /__down?on=1` makes it drop reports to simulate a network failure, and `GET /__log` lists every report. Set `JMP_DATA_DIR` to keep test settings apart from your real ones.
@@ -49,7 +51,7 @@ npm run dist       # build dist/JellyfinMusicPlayer-<version>-portable.exe
 
 ## Dansk
 
-En lille musikafspiller til Windows, der spiller musik fra en Jellyfin-server og **altid rapporterer afspilningen tilbage til Jellyfin**: "spiller nu", fremskridt hvert 10. sekund, pause og stop. Den er lavet, fordi Jellyfin Media Player tit holder op med at rapportere (efter dvale eller netværksskift), så lytninger og skips forsvinder i [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) og i Jellyfins eget kontrolpanel.
+Tonefin er en lille musikafspiller til Windows, der spiller musik fra en Jellyfin-server og **altid rapporterer afspilningen tilbage til Jellyfin**: "spiller nu", fremskridt hvert 10. sekund, pause og stop. Den er lavet, fordi Jellyfin Media Player tit holder op med at rapportere (efter dvale eller netværksskift), så lytninger og skips forsvinder i [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) og i Jellyfins eget kontrolpanel. Tonefin er et uafhængigt projekt og har ikke noget med Jellyfin-projektet at gøre.
 
 - Log ind med serveradresse, brugernavn og kodeord. Kodeordet gemmes ikke, kun den adgangsnøgle Jellyfin giver, krypteret med Windows (DPAPI).
 - Eller log ind med Lyn-forbind: appen viser en kode, som du godkender i Jellyfin i browseren eller på telefonen under **Brugermenu → Lyn-forbind**
@@ -71,7 +73,7 @@ Rapporteringen kører i appens hovedproces, som aldrig bliver sat ned i fart, n�
 
 ### Kør den
 
-Hent `JellyfinMusicPlayer-<version>-portable.exe` og start den. Den er ikke kodesigneret, så Windows SmartScreen beder dig måske bekræfte første gang (**Flere oplysninger → Kør alligevel**). Indstillinger og log gemmes i `%APPDATA%\Jellyfin Music Player`.
+Hent `Tonefin-<version>-portable.exe` og start den. Den er ikke kodesigneret, så Windows SmartScreen beder dig måske bekræfte første gang (**Flere oplysninger → Kør alligevel**). Indstillinger og log gemmes i `%APPDATA%\Tonefin`.
 
 ### Udvikling
 
@@ -81,7 +83,7 @@ Kræver Node.js 20 eller nyere.
 npm install
 npm start          # kør appen
 npm test           # unit-tests af rapporteringen
-npm run dist       # byg dist/JellyfinMusicPlayer-<version>-portable.exe
+npm run dist       # byg dist/Tonefin-<version>-portable.exe
 ```
 
 `node dev/mock-jellyfin.js` starter en falsk Jellyfin på port 8097 med ét album, så du kan prøve appen og se præcis, hvad den rapporterer. `GET /__down?on=1` får den til at droppe rapporter for at simulere netværksfejl, og `GET /__log` viser alle rapporter. Sæt `JMP_DATA_DIR` for at holde test-indstillinger adskilt fra dine rigtige.

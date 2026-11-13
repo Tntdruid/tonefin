@@ -149,7 +149,7 @@ test('authorization header identifies the device and token', () => {
   const c = new JellyfinClient({ server: 'http://x', token: 'tok', deviceId: 'dev1', deviceName: 'Christian-PC', version: '0.1.0' });
   const h = c.authHeader();
   assert.match(h, /^MediaBrowser /);
-  assert.match(h, /Client="Jellyfin Music Player"/);
+  assert.match(h, /Client="Tonefin"/);
   assert.match(h, /DeviceId="dev1"/);
   assert.match(h, /Token="tok"/);
 });
