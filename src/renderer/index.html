@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data: http: https:; media-src http: https: blob:; style-src 'self'; script-src 'self'">
+  <title>Jellyfin Music Player</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="login" class="login hidden">
+    <form id="login-form" class="login-box">
+      <img src="../../assets/icon.png" alt="" class="login-logo">
+      <h1>Jellyfin Music Player</h1>
+      <label>Server<input id="login-server" placeholder="http://10.10.1.33:8096" autocomplete="url" required></label>
+      <label>Brugernavn<input id="login-user" autocomplete="username" required></label>
+      <label>Kodeord<input id="login-pass" type="password" autocomplete="current-password"></label>
+      <button type="submit" id="login-btn">Log ind</button>
+      <p id="login-error" class="error"></p>
+      <p class="muted small">Kodeordet gemmes ikke. Appen husker kun den adgangsnøgle, Jellyfin giver ved login.</p>
+    </form>
+  </section>
+
+  <section id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand"><img src="../../assets/icon.png" alt=""><span>Music Player</span></div>
+      <input id="search" type="search" placeholder="Søg…" autocomplete="off">
+      <nav>
+        <button data-nav="albums">Albums</button>
+        <button data-nav="artists">Kunstnere</button>
+        <button data-nav="songs">Sange</button>
+        <button data-nav="playlists">Playlister</button>
+        <button data-nav="nowplaying">Spiller nu</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="report-status" class="report-status" title="">Ikke startet</div>
+        <div class="muted small" id="user-line"></div>
+        <button id="logout" class="link">Log ud</button>
+        <button id="open-log" class="link">Vis log</button>
+      </div>
+    </aside>
+    <main id="content" class="content"></main>
+    <footer class="bar">
+      <div class="bar-track" id="bar-track">
+        <img id="bar-cover" alt="">
+        <div class="bar-text">
+          <div id="bar-title" class="title">Intet spiller</div>
+          <div id="bar-artist" class="muted"></div>
+        </div>
+      </div>
+      <div class="bar-center">
+        <div class="controls">
+          <button id="btn-shuffle" class="icon" title="Bland køen">⇄</button>
+          <button id="btn-prev" class="icon" title="Forrige">⏮</button>
+          <button id="btn-play" class="icon big" title="Afspil/pause">▶</button>
+          <button id="btn-next" class="icon" title="Næste">⏭</button>
+          <button id="btn-queue" class="icon" title="Kø">☰</button>
+        </div>
+        <div class="seek">
+          <span id="time-pos">0:00</span>
+          <input id="seek" type="range" min="0" max="1000" value="0">
+          <span id="time-dur">0:00</span>
+        </div>
+      </div>
+      <div class="bar-right">
+        <span>🔊</span><input id="volume" type="range" min="0" max="100" value="80">
+      </div>
+    </footer>
+  </section>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="player.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

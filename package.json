@@ -1,0 +1,38 @@
+{
+  "name": "jellyfin-music-player",
+  "productName": "Jellyfin Music Player",
+  "version": "0.1.0",
+  "description": "A small Windows music player for Jellyfin that always reports playback to the server.",
+  "main": "src/main.js",
+  "author": "Tntdruid",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "dist": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "dk.tntdruid.jellyfin-music-player",
+    "productName": "Jellyfin Music Player",
+    "files": [
+      "src/**/*",
+      "assets/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "JellyfinMusicPlayer-${version}-portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0"
+  }
+}
