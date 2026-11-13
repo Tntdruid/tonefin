@@ -2,6 +2,16 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.2.2
+
+🇬🇧
+- Songs are no longer stored in the cache, which could grow to hundreds of MB in `Tonefin-data`. The cache is capped at 50 MB, and a larger one is emptied when the app starts. Album covers are still cached.
+- Security: the build tool's `minimatch` dependency is raised to 11.0.8 (Dependabot alert; it isn't part of the app itself)
+
+🇩🇰
+- Sange gemmes ikke længere i cachen, som kunne vokse til flere hundrede MB i `Tonefin-data`. Cachen må højst fylde 50 MB, og er den større, tømmes den, når appen starter. Albumcovers caches stadig.
+- Sikkerhed: byggeværktøjets afhængighed `minimatch` er hævet til 11.0.8 (Dependabot-advarsel; den er ikke en del af selve appen)
+
 ## 0.2.1
 
 🇬🇧

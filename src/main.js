@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, powerMonitor, safeStorage, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, powerMonitor, safeStorage, Menu, session, shell } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -8,6 +8,33 @@ const { Reporter } = require('./reporter');
 const { Store } = require('./store');
 
 const PROGRESS_INTERVAL_MS = 10 * 1000;
+const CACHE_LIMIT_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Chromium caches every response, which for a music player means every song (hundreds of MB).
+ * Audio is never cached, covers still are, and the cache is capped and emptied if it grew too big.
+ */
+function limitCache() {
+  app.commandLine.appendSwitch('disk-cache-size', String(CACHE_LIMIT_BYTES));
+  return () => {
+    const ses = session.defaultSession;
+    ses.webRequest.onHeadersReceived({ urls: ['*://*/Audio/*'] }, (details, callback) => {
+      const headers = {};
+      for (const [k, v] of Object.entries(details.responseHeaders || {})) {
+        if (!/^(cache-control|expires|etag|last-modified)$/i.test(k)) headers[k] = v;
+      }
+      headers['Cache-Control'] = ['no-store'];
+      callback({ responseHeaders: headers });
+    });
+    ses.getCacheSize().then((size) => {
+      if (size > CACHE_LIMIT_BYTES) {
+        log(`cache is ${Math.round(size / 1048576)} MB, emptying it`);
+        ses.clearCache();
+      }
+    });
+  };
+}
+const setupCache = limitCache();
 
 /** The portable exe keeps its data in "Tonefin-data" next to itself, if that folder can be written to. */
 function portableDataDir() {
@@ -149,6 +176,7 @@ app.whenReady().then(() => {
     onStatus: (status) => win && !win.isDestroyed() && win.webContents.send('report:status', status),
   });
   setInterval(() => reporter.tick(), PROGRESS_INTERVAL_MS);
+  setupCache();
 
   if (client) announce('startup');
 

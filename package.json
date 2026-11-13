@@ -1,7 +1,7 @@
 {
   "name": "tonefin",
   "productName": "Tonefin",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Tonefin: a small Windows music player for Jellyfin that always reports playback to the server.",
   "main": "src/main.js",
   "author": "Tntdruid",
@@ -34,5 +34,8 @@
   "devDependencies": {
     "electron": "45.3.2",
     "electron-builder": "26.18.0"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.8"
   }
 }
