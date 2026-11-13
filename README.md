@@ -16,7 +16,8 @@ Tonefin is a small music player for Windows that plays music from a Jellyfin ser
 
 - Log in with server address, username and password. The password is not stored; only the access token Jellyfin hands out, encrypted with Windows (DPAPI).
 - Or log in with Quick Connect: the app shows a code, which you approve in Jellyfin in the browser or on your phone under **User menu → Quick Connect**
-- Browse albums, artists, songs and playlists, and search
+- Browse albums, artists, songs and playlists, and search. Your playlists are also listed in the sidebar.
+- Favourites: mark songs, albums and artists with a heart and find them all on one page
 - Play an album, artist or playlist with a queue: next/previous, pause, seeking, shuffle, "play next" and "add to queue"
 - Album cover and a "now playing" page with the queue
 - Media keys and the Windows media overlay work
@@ -57,7 +58,8 @@ Tonefin er en lille musikafspiller til Windows, der spiller musik fra en Jellyfi
 
 - Log ind med serveradresse, brugernavn og kodeord. Kodeordet gemmes ikke, kun den adgangsnøgle Jellyfin giver, krypteret med Windows (DPAPI).
 - Eller log ind med Lyn-forbind: appen viser en kode, som du godkender i Jellyfin i browseren eller på telefonen under **Brugermenu → Lyn-forbind**
-- Gennemse albums, kunstnere, sange og playlister, og søg
+- Gennemse albums, kunstnere, sange og playlister, og søg. Dine playlister vises også i sidepanelet.
+- Favoritter: markér sange, albums og kunstnere med et hjerte og find dem alle på én side
 - Afspil et album, en kunstner eller en playliste med kø: næste/forrige, pause, spoling, bland, "afspil som næste" og "tilføj til kø"
 - Albumcover og en "Spiller nu"-side med køen
 - Medietaster og Windows' medieoverlay virker

@@ -39,8 +39,11 @@
         <button data-nav="artists">Kunstnere</button>
         <button data-nav="songs">Sange</button>
         <button data-nav="playlists">Playlister</button>
+        <button data-nav="favorites">Favoritter</button>
         <button data-nav="nowplaying">Spiller nu</button>
       </nav>
+      <div class="side-title muted small">PLAYLISTER</div>
+      <div id="side-playlists" class="side-playlists"></div>
       <div class="sidebar-foot">
         <div id="report-status" class="report-status" title="">Ikke startet</div>
         <div class="muted small" id="user-line"></div>
@@ -56,6 +59,7 @@
           <div id="bar-title" class="title">Intet spiller</div>
           <div id="bar-artist" class="muted"></div>
         </div>
+        <button id="bar-fav" class="icon heart hidden" title="Tilføj til favoritter">♡</button>
       </div>
       <div class="bar-center">
         <div class="controls">

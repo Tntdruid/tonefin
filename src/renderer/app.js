@@ -189,6 +189,7 @@ function startApp(s) {
   $('#user-line').textContent = `${s.userName} · ${s.server.replace(/^https?:\/\//, '')}`;
   navStack.length = 0;
   navigate('albums');
+  loadSidebarPlaylists();
 }
 
 // ---------- navigation ----------
@@ -217,7 +218,7 @@ async function render() {
     const node = await views[current.view](current.param);
     if (seq !== renderSeq) return;
     const top = el('div', { class: 'view' });
-    if (navStack.length && !['albums', 'artists', 'songs', 'playlists', 'nowplaying'].includes(current.view)) {
+    if (navStack.length && !['albums', 'artists', 'songs', 'playlists', 'favorites', 'nowplaying'].includes(current.view)) {
       top.append(el('button', { class: 'link back', onclick: back }, '‹ Tilbage'));
     }
     top.append(node);
@@ -288,6 +289,80 @@ async function playlistTracks(id) {
   return res.Items;
 }
 
+/** Playlists that can hold music. Jellyfin marks many as "Unknown" media type, so only video/photo/book ones are left out. */
+async function musicPlaylists() {
+  const res = await userItems({ IncludeItemTypes: 'Playlist', SortBy: 'SortName' });
+  return res.Items.filter((p) => !['Video', 'Photo', 'Book'].includes(p.MediaType));
+}
+
+async function loadSidebarPlaylists() {
+  const box = $('#side-playlists');
+  try {
+    const lists = await musicPlaylists();
+    box.replaceChildren(
+      ...lists.map((p) => el('button', { title: p.Name, dataset: { id: p.Id }, onclick: () => navigate('playlist', p.Id) }, p.Name)),
+    );
+    if (!lists.length) box.replaceChildren(el('div', { class: 'muted small' }, 'Ingen playlister'));
+  } catch {
+    box.replaceChildren(el('button', { class: 'muted small', onclick: loadSidebarPlaylists }, 'Kunne ikke hente – prøv igen'));
+  }
+}
+
+// ---------- favorites ----------
+
+const favOverride = new Map(); // item id -> favorite state changed in this session
+
+function isFav(item) {
+  if (!item) return false;
+  if (favOverride.has(item.Id)) return favOverride.get(item.Id);
+  return !!(item.UserData && item.UserData.IsFavorite);
+}
+
+function paintHeart(btn, on) {
+  btn.textContent = on ? '♥' : '♡';
+  btn.classList.toggle('on', on);
+  btn.title = on ? 'Fjern fra favoritter' : 'Tilføj til favoritter';
+}
+
+function heart(item, cls = 'icon small') {
+  const b = el('button', {
+    class: `${cls} heart`,
+    dataset: { fav: item.Id },
+    onclick: (e) => {
+      e.stopPropagation();
+      toggleFav(item);
+    },
+  });
+  paintHeart(b, isFav(item));
+  return b;
+}
+
+function repaintHearts(id) {
+  const on = favOverride.get(id);
+  document.querySelectorAll(`[data-fav="${CSS.escape(id)}"]`).forEach((b) => paintHeart(b, on));
+}
+
+async function toggleFav(item) {
+  const on = !isFav(item);
+  favOverride.set(item.Id, on);
+  repaintHearts(item.Id);
+  const method = on ? 'POST' : 'DELETE';
+  try {
+    try {
+      await jf.api(`/UserFavoriteItems/${item.Id}`, { userId: session.userId }, method);
+    } catch (e) {
+      // Servers older than 10.9 only have the old route.
+      if (!/ 404 /.test(cleanError(e))) throw e;
+      await jf.api(`/Users/${session.userId}/FavoriteItems/${item.Id}`, {}, method);
+    }
+    toast(on ? `“${item.Name}” er tilføjet til favoritter` : `“${item.Name}” er fjernet fra favoritter`);
+  } catch (e) {
+    favOverride.set(item.Id, !on);
+    repaintHearts(item.Id);
+    toast(cleanError(e));
+  }
+}
+
 async function artistTracks(id) {
   const res = await userItems({
     ArtistIds: id,
@@ -335,6 +410,7 @@ function trackTable(items, { showAlbum = true, numbers = 'index' } = {}) {
         el(
           'span',
           { class: 'track-actions' },
+          heart(t),
           el('button', { class: 'icon small', title: 'Afspil som næste', onclick: () => (player.playNext([t]), toast('Afspilles som næste')) }, '⤵'),
           el('button', { class: 'icon small', title: 'Tilføj til kø', onclick: () => (player.enqueue([t]), toast('Tilføjet til køen')) }, '+'),
         ),
@@ -362,6 +438,7 @@ function collectionHeader(item, subtitle, tracks) {
         el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, '▶ Afspil'),
         el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, '⇄ Bland'),
         el('button', { onclick: () => (player.enqueue(tracks), toast('Tilføjet til køen')) }, '+ Kø'),
+        item.Type !== 'Playlist' && tracks.length ? heart(item, 'icon big-heart') : null,
       ),
     ),
   );
@@ -407,6 +484,7 @@ const views = {
             { class: 'actions' },
             el('button', { class: 'primary', onclick: () => playFrom(() => artistTracks(id)) }, '▶ Afspil alle'),
             el('button', { onclick: () => playFrom(() => artistTracks(id), { shuffle: true }) }, '⇄ Bland'),
+            heart(artist, 'icon big-heart'),
           ),
         ),
       ),
@@ -423,8 +501,7 @@ const views = {
   },
 
   async playlists() {
-    const res = await userItems({ IncludeItemTypes: 'Playlist', SortBy: 'SortName' });
-    const lists = res.Items.filter((p) => !p.MediaType || p.MediaType === 'Audio');
+    const lists = await musicPlaylists();
     return el(
       'div',
       {},
@@ -436,6 +513,37 @@ const views = {
   async playlist(id) {
     const [pl, tracks] = await Promise.all([api(`/Users/${session.userId}/Items/${id}`), playlistTracks(id)]);
     return el('div', {}, collectionHeader(pl, el('p', { class: 'muted' }, 'Playliste'), tracks), trackTable(tracks, { numbers: 'position' }));
+  },
+
+  async favorites() {
+    const [songs, albums, artists] = await Promise.all([
+      userItems({ Filters: 'IsFavorite', IncludeItemTypes: 'Audio', SortBy: 'SortName' }),
+      userItems({ Filters: 'IsFavorite', IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', Fields: 'ProductionYear' }),
+      api('/Artists', { UserId: session.userId, IsFavorite: true, SortBy: 'SortName', ImageTypeLimit: 1 }),
+    ]);
+    const parts = [el('h1', {}, 'Favoritter')];
+    if (songs.Items.length) {
+      const tracks = songs.Items;
+      parts.push(
+        el(
+          'div',
+          { class: 'title-row' },
+          el('h2', {}, `Sange (${tracks.length})`),
+          el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, '▶ Afspil'),
+          el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, '⇄ Bland'),
+        ),
+        trackTable(tracks, { numbers: 'position' }),
+      );
+    }
+    if (albums.Items.length) parts.push(el('h2', {}, `Albums (${albums.Items.length})`), grid(albums.Items.map(albumCard)));
+    if (artists.Items.length)
+      parts.push(
+        el('h2', {}, `Kunstnere (${artists.Items.length})`),
+        grid(artists.Items.map((a) => card(a, { round: true, onOpen: () => navigate('artist', a.Id), onPlay: () => playFrom(() => artistTracks(a.Id)) }))),
+      );
+    if (parts.length === 1)
+      parts.push(el('div', { class: 'empty' }, 'Ingen favoritter endnu. Tryk på ♡ ved et nummer, et album eller en kunstner for at tilføje det.'));
+    return el('div', {}, parts);
   },
 
   async songs() {
@@ -516,6 +624,7 @@ const views = {
           el('h1', {}, t.Name),
           el('p', {}, artistsOf(t)),
           t.AlbumId ? el('button', { class: 'link muted', onclick: () => navigate('album', t.AlbumId) }, t.Album || '') : null,
+          el('div', { class: 'actions' }, heart(t, 'icon big-heart')),
         ),
       ),
       el('div', { class: 'title-row' }, el('h2', {}, `Kø (${player.queue.length})`), el('button', { onclick: () => player.shuffleQueue() }, '⇄ Bland'), el('button', { onclick: () => player.clearQueue() }, 'Ryd kø')),
@@ -539,6 +648,12 @@ function updateTrack() {
   const url = imageUrl(t, 120);
   img.classList.toggle('hidden', !url);
   if (url) img.src = url;
+  const fav = $('#bar-fav');
+  fav.classList.toggle('hidden', !t);
+  if (t) {
+    fav.dataset.fav = t.Id;
+    paintHeart(fav, isFav(t));
+  }
   markPlaying();
   if (current && current.view === 'nowplaying') render();
   updateMediaSession();
@@ -610,6 +725,10 @@ $('#btn-shuffle').addEventListener('click', () => {
 });
 $('#btn-queue').addEventListener('click', () => navigate('nowplaying'));
 $('#bar-track').addEventListener('click', () => player.current && navigate('nowplaying'));
+$('#bar-fav').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (player.current) toggleFav(player.current);
+});
 
 const seek = $('#seek');
 seek.addEventListener('input', () => {

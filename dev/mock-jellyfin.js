@@ -28,6 +28,11 @@ const tracks = [1, 2, 3].map((n) => ({
   RunTimeTicks: 12 * TICKS,
 }));
 const artist = { Id: 'art1', Name: 'Testkunstner', Type: 'MusicArtist', ImageTags: {} };
+const playlists = [
+  { Id: 'pl1', Name: 'Min playliste', Type: 'Playlist', MediaType: 'Unknown', ImageTags: {} },
+  { Id: 'pl2', Name: 'Film', Type: 'Playlist', MediaType: 'Video', ImageTags: {} },
+];
+const favorites = new Set(['trk2']);
 
 function wav(seconds, freq) {
   const rate = 8000;
@@ -89,14 +94,27 @@ http
     }
     if (p === '/Sessions') return json(res, Object.entries(nowPlaying).map(([DeviceId, Id]) => ({ DeviceId, NowPlayingItem: { Id } })));
 
+    const withUserData = (i) => ({ ...i, UserData: { IsFavorite: favorites.has(i.Id) } });
+    const list = (items) => {
+      const out = (q.Filters === 'IsFavorite' || q.IsFavorite === 'true' ? items.filter((i) => favorites.has(i.Id)) : items).map(withUserData);
+      return json(res, { Items: out, TotalRecordCount: out.length });
+    };
     if (p === '/Users/u1/Items') {
-      if (q.IncludeItemTypes === 'MusicAlbum') return json(res, { Items: [album], TotalRecordCount: 1 });
-      if (q.IncludeItemTypes === 'Audio') return json(res, { Items: tracks, TotalRecordCount: tracks.length });
-      return json(res, { Items: [], TotalRecordCount: 0 });
+      if (q.IncludeItemTypes === 'MusicAlbum') return list([album]);
+      if (q.IncludeItemTypes === 'Audio') return list(tracks);
+      if (q.IncludeItemTypes === 'Playlist') return list(playlists);
+      return list([]);
     }
-    if (p === '/Users/u1/Items/alb1') return json(res, album);
-    if (p === '/Users/u1/Items/art1') return json(res, artist);
-    if (p === '/Artists/AlbumArtists' || p === '/Artists') return json(res, { Items: [artist], TotalRecordCount: 1 });
+    const one = [album, artist, ...playlists].find((i) => p === `/Users/u1/Items/${i.Id}`);
+    if (one) return json(res, withUserData(one));
+    if (p === '/Artists/AlbumArtists' || p === '/Artists') return list([artist]);
+    if (p === '/Playlists/pl1/Items') return list([tracks[2], tracks[0]]);
+    const fav = p.match(/^\/UserFavoriteItems\/(\w+)$/);
+    if (fav) {
+      if (req.method === 'POST') favorites.add(fav[1]);
+      else favorites.delete(fav[1]);
+      return json(res, { IsFavorite: favorites.has(fav[1]) });
+    }
 
     const m = p.match(/^\/Audio\/(\w+)\/(stream|universal)/);
     if (m && audio[m[1]]) {

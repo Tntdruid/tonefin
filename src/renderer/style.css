@@ -58,6 +58,16 @@ h2 { font-size: 18px; margin: 26px 0 12px; }
 .sidebar nav button { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 8px; color: var(--muted); }
 .sidebar nav button:hover { color: var(--text); background: var(--panel-2); }
 .sidebar nav button.active { color: var(--text); background: var(--panel-2); font-weight: 600; }
+.side-title { padding: 6px 10px 0; letter-spacing: .5px; }
+.side-playlists { display: flex; flex-direction: column; gap: 1px; overflow-y: auto; min-height: 0; flex: 1; margin-top: -8px; }
+.side-playlists button { background: none; border: 0; text-align: left; padding: 6px 10px; border-radius: 8px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.side-playlists button:hover { color: var(--text); background: var(--panel-2); }
+.heart.on { color: #e5484d; }
+.heart.on:hover { color: #ff6b70; }
+.icon.big-heart { font-size: 24px; padding: 2px 10px; }
+.track-actions .heart.on { opacity: 1; }
+.track:not(:hover) .track-actions:has(.heart.on) { opacity: 1; }
+.track:not(:hover) .track-actions:has(.heart.on) button:not(.heart) { visibility: hidden; }
 .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .report-status { font-size: 12px; color: var(--muted); padding-left: 14px; position: relative; }
 .report-status::before { content: ""; position: absolute; left: 0; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }

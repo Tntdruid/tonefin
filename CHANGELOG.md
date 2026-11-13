@@ -2,6 +2,20 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.2.0
+
+🇬🇧
+- Favourites: a new "Favoritter" page with your favourite songs, albums and artists
+- Heart buttons on tracks, albums, artists, the "now playing" page and the player bar to add or remove favourites (synced with Jellyfin)
+- Your playlists are listed in the sidebar and open with one click
+- Playlists that Jellyfin hasn't marked as audio are shown now (before, only playlists marked "Audio" appeared)
+
+🇩🇰
+- Favoritter: en ny "Favoritter"-side med dine favoritsange, -albums og -kunstnere
+- Hjerte-knapper på numre, albums, kunstnere, "Spiller nu"-siden og afspillerlinjen til at tilføje eller fjerne favoritter (synkroniseres med Jellyfin)
+- Dine playlister vises i sidepanelet og åbnes med ét klik
+- Playlister, som Jellyfin ikke har markeret som lyd, vises nu (før kom kun playlister markeret "Audio" med)
+
 ## 0.1.1
 
 🇬🇧
