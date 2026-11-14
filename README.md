@@ -99,3 +99,16 @@ npm run dist       # byg dist/Tonefin-<version>-portable.exe
 ```
 
 `node dev/mock-jellyfin.js` starter en falsk Jellyfin på port 8097 med ét album, så du kan prøve appen og se præcis, hvad den rapporterer. `GET /__down?on=1` får den til at droppe rapporter for at simulere netværksfejl, og `GET /__log` viser alle rapporter. Sæt `JMP_DATA_DIR` for at holde test-indstillinger adskilt fra dine rigtige.
+
+---
+
+<!-- jellyfin-projects:start -->
+## More Jellyfin projects / Flere Jellyfin-projekter
+
+| | 🇬🇧 | 🇩🇰 |
+|---|---|---|
+| [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) | Home Assistant add-on with music listening stats: top lists, genres, moods, Wrapped | Home Assistant-add-on med lyttestatistik for musik: top-lister, genrer, humør, Wrapped |
+| [Jellyfin Video Stats](https://github.com/Tntdruid/jellyfin-video-stats) | Home Assistant add-on with viewing stats for movies, series and YouTube videos: progress, binges, transcoding, Wrapped | Home Assistant-add-on med seerstatistik for film, serier og YouTube-videoer: fremdrift, binge, transcoding, Wrapped |
+| [Auto Artist Playlists](https://github.com/Tntdruid/jellyfin-plugin-auto-artist-playlists) | Jellyfin plugin that hearts the songs you listen to and adds them to a playlist per artist | Jellyfin-plugin, der giver hjerte til de sange, du hører, og samler dem i en playliste pr. kunstner |
+| [Episode Title Fixer](https://github.com/Tntdruid/jellyfin-plugin-episode-title-fixer) | Jellyfin plugin that replaces placeholder episode titles like "Episode 11" with the original title | Jellyfin-plugin, der erstatter pladsholdere som "Afsnit 11" med afsnittets originale titel |
+<!-- jellyfin-projects:end -->
