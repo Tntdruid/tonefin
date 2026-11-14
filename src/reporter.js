@@ -154,7 +154,7 @@ class Reporter {
       IsMuted: !!cur.isMuted,
       VolumeLevel: Math.round(cur.volume ?? 100),
       CanSeek: true,
-      RepeatMode: 'RepeatNone',
+      RepeatMode: cur.repeatMode || 'RepeatNone',
       PlaybackOrder: cur.shuffled ? 'Shuffle' : 'Default',
     };
   }

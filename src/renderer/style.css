@@ -145,3 +145,14 @@ h2 { font-size: 18px; margin: 26px 0 12px; }
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
 .login-box .tagline { text-align: center; margin-top: -8px; }
+
+/* 0.3.0: selects, settings, update banner, repeat */
+select { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+select:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
+#btn-repeat.on { color: var(--accent-2); }
+.update { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: 0; color: #fff; font-size: 12px; font-weight: 600; padding: 6px 10px; width: 100%; text-align: left; }
+.settings { max-width: 720px; }
+.settings .option { display: flex; gap: 12px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.settings .option:hover { background: var(--panel-2); }
+.settings .option input { margin-top: 3px; accent-color: var(--accent-2); }
+.settings .option > span { display: flex; flex-direction: column; gap: 2px; }

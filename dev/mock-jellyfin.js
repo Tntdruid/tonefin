@@ -14,7 +14,7 @@ let down = false;
 let quickApproved = false; // GET /__approve approves the Quick Connect code
 const nowPlaying = {};
 
-const album = { Id: 'alb1', Name: 'Testalbum', Type: 'MusicAlbum', AlbumArtist: 'Testkunstner', AlbumArtists: [{ Id: 'art1', Name: 'Testkunstner' }], ProductionYear: 2024, ImageTags: {} };
+const album = { Id: 'alb1', Name: 'Testalbum', Type: 'MusicAlbum', AlbumArtist: 'Testkunstner', AlbumArtists: [{ Id: 'art1', Name: 'Testkunstner' }], ProductionYear: 2024, ImageTags: {}, NormalizationGain: -9 };
 const tracks = [1, 2, 3].map((n) => ({
   Id: `trk${n}`,
   Name: `Sang ${n}`,
@@ -26,6 +26,7 @@ const tracks = [1, 2, 3].map((n) => ({
   IndexNumber: n,
   ParentIndexNumber: 1,
   RunTimeTicks: 12 * TICKS,
+  NormalizationGain: [-6, -12, 0][n - 1],
 }));
 const artist = { Id: 'art1', Name: 'Testkunstner', Type: 'MusicArtist', ImageTags: {} };
 const playlists = [
@@ -76,6 +77,8 @@ http
     // Act like a server plugin: heart a song, or create a playlist, behind the client's back.
     if (p === '/__fav') return json(res, favorites.add(q.id).has(q.id));
     if (p === '/__addplaylist') return json(res, playlists.push({ Id: 'pl3', Name: q.name || 'Testkunstner', Type: 'Playlist', MediaType: 'Audio', ImageTags: {} }));
+    if (p === '/__release') return json(res, { tag_name: 'v9.9.9', html_url: 'https://github.com/Tntdruid/tonefin/releases/tag/v9.9.9' });
+    if (p === '/Genres') return json(res, { Items: [{ Id: 'g1', Name: 'Rock' }, { Id: 'g2', Name: 'Jazz' }], TotalRecordCount: 2 });
     if (p === '/__approve') return json(res, (quickApproved = true));
     if (p === '/QuickConnect/Enabled') return json(res, true);
     if (p === '/QuickConnect/Initiate') return json(res, (quickApproved = false) || { Code: '123456', Secret: 'qcsecret' });
@@ -103,7 +106,7 @@ http
       return json(res, { Items: out, TotalRecordCount: out.length });
     };
     if (p === '/Users/u1/Items') {
-      if (q.IncludeItemTypes === 'MusicAlbum') return list([album]);
+      if (q.IncludeItemTypes === 'MusicAlbum') return list(q.GenreIds && q.GenreIds !== 'g1' ? [] : [album]);
       if (q.IncludeItemTypes === 'Audio') return list(tracks);
       if (q.IncludeItemTypes === 'Playlist') return list(playlists);
       return list([]);

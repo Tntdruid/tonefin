@@ -35,6 +35,7 @@
       <div class="brand"><img src="../../assets/icon.png" alt=""><span>Tonefin</span></div>
       <input id="search" type="search" placeholder="Søg…" autocomplete="off">
       <nav>
+        <button data-nav="home">Hjem</button>
         <button data-nav="albums">Albums</button>
         <button data-nav="artists">Kunstnere</button>
         <button data-nav="songs">Sange</button>
@@ -45,16 +46,18 @@
       <div class="side-title muted small">PLAYLISTER</div>
       <div id="side-playlists" class="side-playlists"></div>
       <div class="sidebar-foot">
+        <button id="update-banner" class="update hidden"></button>
         <div id="report-status" class="report-status" title="">Ikke startet</div>
         <div class="muted small" id="user-line"></div>
         <button id="logout" class="link">Log ud</button>
+        <button data-nav="settings" class="link">Indstillinger</button>
         <button id="open-log" class="link">Vis log</button>
       </div>
     </aside>
     <main id="content" class="content"></main>
     <footer class="bar">
       <div class="bar-track" id="bar-track">
-        <img id="bar-cover" alt="">
+        <img id="bar-cover" class="hidden" alt="">
         <div class="bar-text">
           <div id="bar-title" class="title">Intet spiller</div>
           <div id="bar-artist" class="muted"></div>
@@ -67,6 +70,7 @@
           <button id="btn-prev" class="icon" title="Forrige">⏮</button>
           <button id="btn-play" class="icon big" title="Afspil/pause">▶</button>
           <button id="btn-next" class="icon" title="Næste">⏭</button>
+          <button id="btn-repeat" class="icon" title="Gentag: fra">↻</button>
           <button id="btn-queue" class="icon" title="Kø">☰</button>
         </div>
         <div class="seek">

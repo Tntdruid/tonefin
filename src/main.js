@@ -6,6 +6,10 @@ const path = require('path');
 const { JellyfinClient, normalizeServer } = require('./jellyfin');
 const { Reporter } = require('./reporter');
 const { Store } = require('./store');
+const { isNewer } = require('./version');
+
+const RELEASES_URL = process.env.JMP_UPDATE_URL || 'https://api.github.com/repos/Tntdruid/tonefin/releases/latest';
+const RELEASE_PAGE = /^https:\/\/github\.com\/Tntdruid\/tonefin\/releases\//;
 
 const PROGRESS_INTERVAL_MS = 10 * 1000;
 const CACHE_LIMIT_BYTES = 50 * 1024 * 1024;
@@ -248,6 +252,25 @@ app.whenReady().then(() => {
   ipcMain.on('net:online', () => announce('network online'));
   ipcMain.handle('report:status', () => reporter.status);
   ipcMain.handle('log:open', () => shell.showItemInFolder(logFile));
+  ipcMain.handle('app:version', () => app.getVersion());
+
+  // Asks GitHub for the latest release. Nothing about the user or the library is sent.
+  ipcMain.handle('update:check', async () => {
+    const res = await fetch(RELEASES_URL, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Tonefin' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`GitHub svarede ${res.status}`);
+    const release = await res.json();
+    const latest = String(release.tag_name || '').replace(/^v/i, '');
+    const current = app.getVersion();
+    const newer = isNewer(latest, current);
+    if (newer) log(`update available: ${latest} (running ${current})`);
+    return { current, latest, newer, url: release.html_url };
+  });
+  ipcMain.handle('update:open', (_e, url) => {
+    if (RELEASE_PAGE.test(String(url))) shell.openExternal(url);
+  });
 
   Menu.setApplicationMenu(null);
   createWindow();

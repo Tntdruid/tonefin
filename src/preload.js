@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('jf', {
   online: () => ipcRenderer.send('net:online'),
   reportStatus: () => ipcRenderer.invoke('report:status'),
   openLog: () => ipcRenderer.invoke('log:open'),
+  appVersion: () => ipcRenderer.invoke('app:version'),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  openRelease: (url) => ipcRenderer.invoke('update:open', url),
   onReportStatus: (fn) => ipcRenderer.on('report:status', (_e, s) => fn(s)),
   onResume: (fn) => ipcRenderer.on('power:resume', () => fn()),
 });

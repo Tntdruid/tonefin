@@ -153,3 +153,21 @@ test('authorization header identifies the device and token', () => {
   assert.match(h, /DeviceId="dev1"/);
   assert.match(h, /Token="tok"/);
 });
+
+test('repeat mode is reported', async () => {
+  const t = setup();
+  await t.r.update(track('a', { repeatMode: 'RepeatOne' }));
+  assert.strictEqual(t.calls[0].body.RepeatMode, 'RepeatOne');
+  await t.r.update(track('a', { repeatMode: 'RepeatAll', event: 'RepeatModeChange' }));
+  assert.strictEqual(t.calls[1].body.RepeatMode, 'RepeatAll');
+  assert.strictEqual(t.calls[1].body.EventName, 'RepeatModeChange');
+});
+
+test('version comparison for update checks', () => {
+  const { isNewer } = require('../src/version');
+  assert.strictEqual(isNewer('0.3.0', '0.2.2'), true);
+  assert.strictEqual(isNewer('v0.10.0', '0.9.9'), true);
+  assert.strictEqual(isNewer('0.2.2', '0.2.2'), false);
+  assert.strictEqual(isNewer('0.2.1', '0.2.2'), false);
+  assert.strictEqual(isNewer('', '0.2.2'), false);
+});

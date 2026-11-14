@@ -88,6 +88,25 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.add('hidden'), 4000);
 }
 
+// Small per-computer settings (stored with the app's data, next to the exe).
+const prefs = {
+  get(key, fallback) {
+    try {
+      const v = localStorage.getItem('pref:' + key);
+      return v === null ? fallback : JSON.parse(v);
+    } catch {
+      return fallback;
+    }
+  },
+  set(key, value) {
+    try {
+      localStorage.setItem('pref:' + key, JSON.stringify(value));
+    } catch {
+      /* ignore */
+    }
+  },
+};
+
 // ---------- login ----------
 
 async function showLogin(message) {
@@ -174,6 +193,7 @@ $('#quick-cancel').addEventListener('click', () => {
 });
 
 $('#logout').addEventListener('click', async () => {
+  forgetQueue();
   player.clearQueue();
   await jf.logout();
   session = null;
@@ -188,9 +208,93 @@ function startApp(s) {
   $('#app').classList.remove('hidden');
   $('#user-line').textContent = `${s.userName} · ${s.server.replace(/^https?:\/\//, '')}`;
   navStack.length = 0;
-  navigate('albums');
+  restoreQueue();
+  navigate('home');
   loadSidebarPlaylists();
+  if (prefs.get('autoUpdateCheck', true)) checkForUpdate(false);
 }
+
+// ---------- remember the queue ----------
+
+const SAVED_FIELDS = ['Id', 'Name', 'Type', 'Album', 'AlbumId', 'AlbumArtist', 'Artists', 'RunTimeTicks', 'IndexNumber',
+  'ParentIndexNumber', 'ImageTags', 'AlbumPrimaryImageTag', 'NormalizationGain'];
+const MAX_SAVED = 1000;
+
+function queueKey() {
+  return session ? `queue:${session.server}:${session.userId}` : null;
+}
+
+function slim(item) {
+  const out = {};
+  for (const f of SAVED_FIELDS) if (item[f] !== undefined) out[f] = item[f];
+  if (item.UserData) out.UserData = { IsFavorite: !!item.UserData.IsFavorite };
+  return out;
+}
+
+function saveQueue() {
+  const key = queueKey();
+  if (!key) return;
+  try {
+    if (!player.queue.length || player.index < 0) return localStorage.removeItem(key);
+    let start = 0;
+    if (player.queue.length > MAX_SAVED) start = Math.max(0, Math.min(player.index - 100, player.queue.length - MAX_SAVED));
+    const queue = player.queue.slice(start, start + MAX_SAVED).map(slim);
+    localStorage.setItem(key, JSON.stringify({
+      queue,
+      index: player.index - start,
+      position: player.audio.ended ? 0 : player.audio.currentTime || 0,
+      shuffled: player.shuffled,
+    }));
+  } catch {
+    /* not important enough to bother the user */
+  }
+}
+
+let saveTimer = null;
+function saveQueueSoon() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveQueue, 1000);
+}
+
+function forgetQueue() {
+  const key = queueKey();
+  try {
+    if (key) localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+function restoreQueue() {
+  const key = queueKey();
+  if (!key || player.queue.length) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (saved && saved.queue && saved.queue.length) player.restore(saved.queue, saved.index, saved.position, { shuffled: saved.shuffled });
+  } catch {
+    /* start with an empty queue */
+  }
+}
+
+// ---------- updates ----------
+
+let updateInfo = null;
+async function checkForUpdate(manual) {
+  try {
+    updateInfo = await jf.checkUpdate();
+    const banner = $('#update-banner');
+    banner.classList.toggle('hidden', !updateInfo.newer);
+    banner.textContent = `Ny version ${updateInfo.latest} – hent den`;
+    if (manual) toast(updateInfo.newer ? `Tonefin ${updateInfo.latest} er klar` : `Du har den nyeste version (${updateInfo.current})`);
+  } catch (e) {
+    if (manual) toast(`Kunne ikke tjekke for opdateringer: ${cleanError(e)}`);
+  }
+  if (current && current.view === 'settings') render();
+}
+$('#update-banner').addEventListener('click', () => updateInfo && jf.openRelease(updateInfo.url));
+setInterval(() => {
+  if (session && prefs.get('autoUpdateCheck', true)) checkForUpdate(false);
+}, 6 * 60 * 60 * 1000);
 
 // ---------- navigation ----------
 
@@ -218,7 +322,7 @@ async function render() {
     const node = await views[current.view](current.param);
     if (seq !== renderSeq) return;
     const top = el('div', { class: 'view' });
-    if (navStack.length && !['albums', 'artists', 'songs', 'playlists', 'favorites', 'nowplaying'].includes(current.view)) {
+    if (navStack.length && !['home', 'albums', 'artists', 'songs', 'playlists', 'favorites', 'nowplaying', 'settings'].includes(current.view)) {
       top.append(el('button', { class: 'link back', onclick: back }, '‹ Tilbage'));
     }
     top.append(node);
@@ -423,7 +527,7 @@ function albumCard(a) {
   });
 }
 
-function trackTable(items, { showAlbum = true, numbers = 'index' } = {}) {
+function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistsOf } = {}) {
   const discs = new Set(items.map((t) => t.ParentIndexNumber || 1));
   const rows = [];
   let lastDisc = null;
@@ -438,7 +542,7 @@ function trackTable(items, { showAlbum = true, numbers = 'index' } = {}) {
         'div',
         { class: 'track', dataset: { id: t.Id }, ondblclick: () => player.playList(items, i), title: 'Dobbeltklik for at afspille' },
         el('button', { class: 'track-num', onclick: () => player.playList(items, i), title: 'Afspil herfra' }, el('span', {}, num), el('i', {}, '▶')),
-        el('div', { class: 'track-main' }, el('div', { class: 'track-title' }, t.Name), el('div', { class: 'muted small' }, artistsOf(t))),
+        el('div', { class: 'track-main' }, el('div', { class: 'track-title' }, t.Name), el('div', { class: 'muted small' }, sub(t))),
         showAlbum ? el('button', { class: 'link muted track-album', onclick: () => t.AlbumId && navigate('album', t.AlbumId) }, t.Album || '') : el('span'),
         el('span', { class: 'muted track-dur' }, fmtTime(ticksToSec(t.RunTimeTicks))),
         el(
@@ -481,9 +585,106 @@ function collectionHeader(item, subtitle, tracks) {
 // ---------- views ----------
 
 const views = {
+  async home() {
+    const [latest, recent, most] = await Promise.all([
+      userItems({ IncludeItemTypes: 'MusicAlbum', SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, Fields: 'ProductionYear' }),
+      userItems({ IncludeItemTypes: 'Audio', SortBy: 'DatePlayed', SortOrder: 'Descending', Filters: 'IsPlayed', Limit: 15 }),
+      userItems({ IncludeItemTypes: 'Audio', SortBy: 'PlayCount', SortOrder: 'Descending', Filters: 'IsPlayed', Limit: 15 }),
+    ]);
+    const plays = (t) => {
+      const n = (t.UserData && t.UserData.PlayCount) || 0;
+      return `${artistsOf(t)} · ${n} ${n === 1 ? 'afspilning' : 'afspilninger'}`;
+    };
+    const section = (title, items, node) =>
+      items.length
+        ? [el('div', { class: 'title-row' }, el('h2', {}, title), el('button', { onclick: () => player.playList(items, 0) }, '▶ Afspil')), node]
+        : [];
+    return el(
+      'div',
+      {},
+      el('h1', {}, `Hej ${session.userName}`),
+      latest.Items.length ? [el('h2', {}, 'Senest tilføjet'), grid(latest.Items.map(albumCard))] : null,
+      section('Senest afspillet', recent.Items, trackTable(recent.Items, { numbers: 'position' })),
+      section('Mest afspillet', most.Items, trackTable(most.Items, { numbers: 'position', sub: plays })),
+      !latest.Items.length && !recent.Items.length ? el('div', { class: 'empty' }, 'Intet endnu. Gå til Albums og start noget musik.') : null,
+    );
+  },
+
   async albums() {
-    const res = await userItems({ IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', Fields: 'ProductionYear' });
-    return el('div', {}, el('h1', {}, 'Albums'), grid(res.Items.map(albumCard)));
+    const SORTS = {
+      name: { label: 'Navn', SortBy: 'SortName', SortOrder: 'Ascending' },
+      artist: { label: 'Kunstner', SortBy: 'AlbumArtist,SortName', SortOrder: 'Ascending' },
+      year: { label: 'År (nyeste først)', SortBy: 'ProductionYear,SortName', SortOrder: 'Descending' },
+      yearOld: { label: 'År (ældste først)', SortBy: 'ProductionYear,SortName', SortOrder: 'Ascending' },
+      added: { label: 'Senest tilføjet', SortBy: 'DateCreated', SortOrder: 'Descending' },
+      random: { label: 'Tilfældig', SortBy: 'Random', SortOrder: 'Ascending' },
+    };
+    const sortKey = SORTS[prefs.get('albumSort', 'name')] ? prefs.get('albumSort', 'name') : 'name';
+    const genres = await api('/Genres', { UserId: session.userId, IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', Recursive: true }).catch(() => ({ Items: [] }));
+    let genreId = prefs.get('albumGenre', '');
+    if (genreId && !genres.Items.some((g) => g.Id === genreId)) genreId = '';
+    const { SortBy, SortOrder } = SORTS[sortKey];
+    const res = await userItems({ IncludeItemTypes: 'MusicAlbum', SortBy, SortOrder, Fields: 'ProductionYear', GenreIds: genreId || undefined });
+
+    const sortSelect = el('select', {
+      title: 'Sortér',
+      onchange: (e) => {
+        prefs.set('albumSort', e.target.value);
+        render();
+      },
+    }, Object.entries(SORTS).map(([k, v]) => el('option', { value: k, selected: k === sortKey }, v.label)));
+    const genreSelect = el('select', {
+      title: 'Genre',
+      onchange: (e) => {
+        prefs.set('albumGenre', e.target.value);
+        render();
+      },
+    }, el('option', { value: '' }, 'Alle genrer'), genres.Items.map((g) => el('option', { value: g.Id, selected: g.Id === genreId }, g.Name)));
+    return el(
+      'div',
+      {},
+      el('div', { class: 'title-row' }, el('h1', {}, 'Albums'), el('span', { class: 'muted' }, `${res.Items.length} albums`), genreSelect, sortSelect),
+      grid(res.Items.map(albumCard)),
+    );
+  },
+
+  async settings() {
+    const norm = prefs.get('normalization', 'track');
+    const radio = (value, label, hint) =>
+      el('label', { class: 'option' },
+        el('input', {
+          type: 'radio',
+          name: 'norm',
+          value,
+          checked: norm === value,
+          onchange: () => {
+            prefs.set('normalization', value);
+            player.setNormalization(value);
+          },
+        }),
+        el('span', {}, el('b', {}, label), el('span', { class: 'muted small' }, hint)));
+    const auto = el('input', {
+      type: 'checkbox',
+      checked: prefs.get('autoUpdateCheck', true),
+      onchange: (e) => prefs.set('autoUpdateCheck', e.target.checked),
+    });
+    const version = updateInfo ? updateInfo.current : await jf.appVersion();
+    return el(
+      'div',
+      { class: 'settings' },
+      el('h1', {}, 'Indstillinger'),
+      el('h2', {}, 'Ens lydstyrke'),
+      el('p', { class: 'muted' }, 'Bruger Jellyfins lydstyrkeanalyse, så numre og albums spiller lige højt. Det kræver, at Jellyfins planlagte opgave "Audio Normalization" har kørt. Numre, der ikke er analyseret, spiller uændret.'),
+      radio('off', 'Fra', 'Spil numrene, som de er'),
+      radio('track', 'Pr. nummer', 'Alle numre spiller lige højt. Godt til blandede playlister.'),
+      radio('album', 'Pr. album', 'Albummet beholder sin forskel mellem stille og høje numre'),
+      el('h2', {}, 'Opdateringer'),
+      el('label', { class: 'option' }, auto, el('span', {}, el('b', {}, 'Tjek automatisk for nye versioner'), el('span', { class: 'muted small' }, 'Ved opstart og hver 6. time. Spørger kun GitHub om nyeste version.'))),
+      el('p', { class: 'actions' },
+        el('button', { onclick: () => checkForUpdate(true) }, 'Søg efter opdateringer nu'),
+        updateInfo && updateInfo.newer ? el('button', { class: 'primary', onclick: () => jf.openRelease(updateInfo.url) }, `Hent ${updateInfo.latest}`) : null),
+      el('p', { class: 'muted small' }, `Tonefin ${version}`),
+    );
   },
 
   async artists() {
@@ -757,6 +958,48 @@ player.addEventListener('queue', () => {
   if (current && current.view === 'nowplaying') render();
 });
 player.addEventListener('error', (e) => toast(e.detail));
+player.addEventListener('track', saveQueueSoon);
+player.addEventListener('queue', saveQueueSoon);
+player.addEventListener('state', saveQueueSoon);
+let lastSave = 0;
+player.addEventListener('time', () => {
+  if (Date.now() - lastSave > 10000) {
+    lastSave = Date.now();
+    saveQueue();
+  }
+});
+window.addEventListener('beforeunload', saveQueue);
+
+const REPEAT = {
+  RepeatNone: { next: 'RepeatAll', title: 'Gentag: fra', text: '↻' },
+  RepeatAll: { next: 'RepeatOne', title: 'Gentag: hele køen', text: '↻' },
+  RepeatOne: { next: 'RepeatNone', title: 'Gentag: dette nummer', text: '↻¹' },
+};
+function paintRepeat() {
+  const r = REPEAT[player.repeatMode];
+  const b = $('#btn-repeat');
+  b.textContent = r.text;
+  b.title = r.title;
+  b.classList.toggle('on', player.repeatMode !== 'RepeatNone');
+}
+$('#btn-repeat').addEventListener('click', () => {
+  player.setRepeat(REPEAT[player.repeatMode].next);
+  prefs.set('repeat', player.repeatMode);
+  paintRepeat();
+  toast(REPEAT[player.repeatMode].title);
+});
+player.setRepeat(prefs.get('repeat', 'RepeatNone'));
+paintRepeat();
+
+const albumGains = new Map();
+player.albumGain = (albumId) => {
+  if (!albumGains.has(albumId)) {
+    albumGains.set(albumId, api(`/Users/${session.userId}/Items/${albumId}`).then((a) => a.NormalizationGain ?? null));
+  }
+  return albumGains.get(albumId);
+};
+player.setNormalization(prefs.get('normalization', 'track'));
+
 player.addEventListener('queueend', (e) => {
   setTimeout(() => refreshFav(e.detail), 3000);
   refreshSidebarPlaylistsSoon();

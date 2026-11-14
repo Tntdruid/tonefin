@@ -26,6 +26,11 @@ class Player extends EventTarget {
     this.errors = 0;
     this.lastUpdate = 0;
     this.retryTimer = null;
+    this.repeatMode = 'RepeatNone'; // RepeatNone | RepeatAll | RepeatOne (Jellyfin's names)
+    this.normalization = 'off'; // off | track | album
+    this.gainDb = 0;
+    this.volumePct = 80;
+    this.albumGain = null; // async (albumId) => dB or null, set by the app
     this._wire();
   }
 
@@ -97,6 +102,7 @@ class Player extends EventTarget {
     this.playSessionId = newId();
     this.playMethod = 'DirectPlay';
     this._load(startAt);
+    this._updateGain();
     this._emit('track');
     this._emit('queue');
   }
@@ -109,6 +115,29 @@ class Player extends EventTarget {
 
   next() {
     if (this.index + 1 < this.queue.length) this.playIndex(this.index + 1);
+    else if (this.repeatMode === 'RepeatAll' && this.queue.length) this.playIndex(0);
+  }
+
+  setRepeat(mode) {
+    this.repeatMode = ['RepeatAll', 'RepeatOne'].includes(mode) ? mode : 'RepeatNone';
+    this._report('RepeatModeChange');
+    this._emit('state');
+  }
+
+  /** Puts a saved queue back without playing it; playback (and reporting) starts when the user presses play. */
+  restore(queue, index, position = 0, { shuffled = false } = {}) {
+    const list = (queue || []).filter((i) => i && i.Type === 'Audio');
+    if (!list.length || index < 0 || index >= list.length) return;
+    this._leaveTrack();
+    this.queue = list;
+    this.index = index;
+    this.shuffled = shuffled;
+    this.playSessionId = newId();
+    this.playMethod = 'DirectPlay';
+    this._load(position, false);
+    this._updateGain();
+    this._emit('track');
+    this._emit('queue');
   }
 
   prev() {
@@ -127,7 +156,36 @@ class Player extends EventTarget {
    */
   setVolume(v) {
     this.volumePct = Math.min(100, Math.max(0, Number(v) || 0));
-    this.audio.volume = Math.pow(this.volumePct / 100, 3);
+    this._applyVolume();
+  }
+
+  /** 'off', 'track' or 'album': use Jellyfin's loudness analysis so tracks play equally loud. */
+  setNormalization(mode) {
+    this.normalization = ['track', 'album'].includes(mode) ? mode : 'off';
+    this._updateGain();
+  }
+
+  _applyVolume() {
+    const base = Math.pow(this.volumePct / 100, 3);
+    const gain = this.normalization === 'off' ? 0 : this.gainDb;
+    // The <audio> element can only turn down, so a positive gain (a quiet track) is capped at the slider volume.
+    this.audio.volume = Math.min(1, base * Math.pow(10, gain / 20));
+  }
+
+  async _updateGain() {
+    const item = this.current;
+    let gain = 0;
+    if (item && this.normalization === 'track') gain = item.NormalizationGain ?? 0;
+    if (item && this.normalization === 'album') {
+      gain = item.NormalizationGain ?? 0;
+      if (item.AlbumId && this.albumGain) {
+        const albumDb = await this.albumGain(item.AlbumId).catch(() => null);
+        if (this.current !== item) return;
+        if (typeof albumDb === 'number') gain = albumDb;
+      }
+    }
+    this.gainDb = Number(gain) || 0;
+    this._applyVolume();
   }
 
   get duration() {
@@ -205,6 +263,7 @@ class Player extends EventTarget {
       isMuted: this.audio.muted,
       volume: Math.round(this.volumePct ?? 100),
       shuffled: this.shuffled,
+      repeatMode: this.repeatMode,
       event,
     };
   }
@@ -248,7 +307,10 @@ class Player extends EventTarget {
         jf.playerStop(end);
       }
       this.reported = false;
-      if (this.index + 1 < this.queue.length) this.playIndex(this.index + 1);
+      // Each repeat is a new play session, so Jellyfin (and stats) count it as a new listen.
+      if (this.repeatMode === 'RepeatOne') this.playIndex(this.index);
+      else if (this.index + 1 < this.queue.length) this.playIndex(this.index + 1);
+      else if (this.repeatMode === 'RepeatAll') this.playIndex(0);
       else {
         this._emit('state');
         this._emit('queueend', item);

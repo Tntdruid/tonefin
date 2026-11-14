@@ -2,6 +2,26 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.3.0
+
+🇬🇧
+- Home page with recently added albums and recently and most played songs
+- Albums can be sorted by name, artist, year, date added or randomly, and filtered by genre. The choice is remembered.
+- Repeat: the whole queue or the current song. Each repeat counts as a new listen in Jellyfin.
+- The queue and position are remembered: after a restart the song waits paused where you left off, and nothing is reported to Jellyfin until you press play
+- Equal loudness using Jellyfin's audio normalization, per song or per album (Settings). Requires Jellyfin's "Audio Normalization" task to have run.
+- Checks GitHub for new versions at startup and every 6 hours and shows a "new version" button in the sidebar (can be turned off in Settings)
+- New Settings page
+
+🇩🇰
+- Forside med senest tilføjede albums og senest og mest afspillede sange
+- Albums kan sorteres efter navn, kunstner, år, dato tilføjet eller tilfældigt og filtreres efter genre. Valget huskes.
+- Gentag: hele køen eller det aktuelle nummer. Hver gentagelse tæller som en ny lytning i Jellyfin.
+- Køen og positionen huskes: efter en genstart venter nummeret på pause, hvor du slap, og intet rapporteres til Jellyfin, før du trykker afspil
+- Ens lydstyrke med Jellyfins lydstyrkenormalisering, pr. nummer eller pr. album (Indstillinger). Kræver, at Jellyfins opgave "Audio Normalization" har kørt.
+- Tjekker GitHub for nye versioner ved opstart og hver 6. time og viser en "ny version"-knap i sidepanelet (kan slås fra i Indstillinger)
+- Ny side med indstillinger
+
 ## 0.2.2
 
 🇬🇧

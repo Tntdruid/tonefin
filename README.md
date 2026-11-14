@@ -20,6 +20,10 @@ Tonefin is a small music player for Windows that plays music from a Jellyfin ser
 - Favourites: mark songs, albums and artists with a heart and find them all on one page
 - Play an album, artist or playlist with a queue: next/previous, pause, seeking, shuffle, "play next" and "add to queue"
 - Album cover and a "now playing" page with the queue
+- Home page with recently added albums and recently and most played songs; albums can be sorted and filtered by genre
+- Repeat (queue or song), and the queue and position are remembered between restarts
+- Equal loudness using Jellyfin's audio normalization, per song or per album
+- Tells you when a new version is out on GitHub
 - Media keys and the Windows media overlay work
 - Formats the built-in player can't decode are converted to MP3 by Jellyfin automatically
 
@@ -62,6 +66,10 @@ Tonefin er en lille musikafspiller til Windows, der spiller musik fra en Jellyfi
 - Favoritter: markér sange, albums og kunstnere med et hjerte og find dem alle på én side
 - Afspil et album, en kunstner eller en playliste med kø: næste/forrige, pause, spoling, bland, "afspil som næste" og "tilføj til kø"
 - Albumcover og en "Spiller nu"-side med køen
+- Forside med senest tilføjede albums og senest og mest afspillede sange; albums kan sorteres og filtreres efter genre
+- Gentag (kø eller nummer), og køen og positionen huskes mellem genstarter
+- Ens lydstyrke med Jellyfins lydstyrkenormalisering, pr. nummer eller pr. album
+- Fortæller, når der er en ny version på GitHub
 - Medietaster og Windows' medieoverlay virker
 - Formater, som den indbyggede afspiller ikke kan afkode, bliver automatisk konverteret til MP3 af Jellyfin
 
