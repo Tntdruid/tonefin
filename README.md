@@ -12,7 +12,7 @@
 
 ## English
 
-Tonefin is a small music player for Windows that plays music from a Jellyfin server and **always reports playback back to Jellyfin**: "now playing", progress every 10 seconds, pause and stop. It was made because Jellyfin Media Player often stops reporting (after sleep or a network change), so plays and skips go missing in [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) and in Jellyfin's own dashboard. The app itself is in Danish. Tonefin is an independent project and not affiliated with the Jellyfin project.
+Tonefin is a small music player for Windows that plays music from a Jellyfin server and **always reports playback back to Jellyfin**: "now playing", progress every 10 seconds, pause and stop. It was made because Jellyfin Media Player often stops reporting (after sleep or a network change), so plays and skips go missing in [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) and in Jellyfin's own dashboard. The app is in English and Danish: it follows the Windows language, and you can switch under Settings. Tonefin is an independent project and not affiliated with the Jellyfin project.
 
 - Log in with server address, username and password. The password is not stored; only the access token Jellyfin hands out, encrypted with Windows (DPAPI).
 - Or log in with Quick Connect: the app shows a code, which you approve in Jellyfin in the browser or on your phone under **User menu → Quick Connect**
@@ -58,7 +58,7 @@ npm run dist       # build dist/Tonefin-<version>-portable.exe
 
 ## Dansk
 
-Tonefin er en lille musikafspiller til Windows, der spiller musik fra en Jellyfin-server og **altid rapporterer afspilningen tilbage til Jellyfin**: "spiller nu", fremskridt hvert 10. sekund, pause og stop. Den er lavet, fordi Jellyfin Media Player tit holder op med at rapportere (efter dvale eller netværksskift), så lytninger og skips forsvinder i [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) og i Jellyfins eget kontrolpanel. Tonefin er et uafhængigt projekt og har ikke noget med Jellyfin-projektet at gøre.
+Tonefin er en lille musikafspiller til Windows, der spiller musik fra en Jellyfin-server og **altid rapporterer afspilningen tilbage til Jellyfin**: "spiller nu", fremskridt hvert 10. sekund, pause og stop. Den er lavet, fordi Jellyfin Media Player tit holder op med at rapportere (efter dvale eller netværksskift), så lytninger og skips forsvinder i [Jellyfin Music Stats](https://github.com/Tntdruid/jellyfin-music-stats) og i Jellyfins eget kontrolpanel. Appen findes på dansk og engelsk: den følger Windows' sprog, og du kan skifte under Indstillinger. Tonefin er et uafhængigt projekt og har ikke noget med Jellyfin-projektet at gøre.
 
 - Log ind med serveradresse, brugernavn og kodeord. Kodeordet gemmes ikke, kun den adgangsnøgle Jellyfin giver, krypteret med Windows (DPAPI).
 - Eller log ind med Lyn-forbind: appen viser en kode, som du godkender i Jellyfin i browseren eller på telefonen under **Brugermenu → Lyn-forbind**

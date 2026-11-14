@@ -173,7 +173,7 @@ app.whenReady().then(() => {
 
   reporter = new Reporter({
     send: (p, body) => {
-      if (!client || !client.token) return Promise.reject(new Error('ikke logget ind'));
+      if (!client || !client.token) return Promise.reject(new Error('E_NOT_LOGGED_IN'));
       return client.request('POST', p, { body });
     },
     log,
@@ -219,7 +219,7 @@ app.whenReady().then(() => {
     return code;
   });
   ipcMain.handle('quick:check', async () => {
-    if (!quick) throw new Error('Lyn-forbind er ikke startet');
+    if (!quick) throw new Error('E_QC_NOT_STARTED');
     if (!(await quick.client.quickConnectAuthorized(quick.secret))) return null;
     const { client: c, secret } = quick;
     quick = null;
@@ -243,7 +243,7 @@ app.whenReady().then(() => {
   }));
 
   ipcMain.handle('api', (_e, { method, path: p, query, body }) => {
-    if (!client) throw new Error('Ikke logget ind');
+    if (!client) throw new Error('E_NOT_LOGGED_IN');
     return client.request(method || 'GET', p, { query, body });
   });
 
@@ -260,7 +260,7 @@ app.whenReady().then(() => {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Tonefin' },
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) throw new Error(`GitHub svarede ${res.status}`);
+    if (!res.ok) throw new Error(`E_GITHUB ${res.status}`);
     const release = await res.json();
     const latest = String(release.tag_name || '').replace(/^v/i, '');
     const current = app.getVersion();

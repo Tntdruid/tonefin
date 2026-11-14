@@ -1,5 +1,5 @@
 'use strict';
-/* global jf */
+/* global jf, t */
 
 const TICKS_PER_SECOND = 10000000;
 
@@ -323,7 +323,7 @@ class Player extends EventTarget {
       const wasPlaying = true;
       if (err.code === MediaError.MEDIA_ERR_NETWORK) {
         // Server or network gone: keep trying the same track from the same spot.
-        this._emit('error', 'Mistede forbindelsen til Jellyfin – prøver igen');
+        this._emit('error', t('player.netLost'));
         this.retryTimer = setTimeout(() => this._load(pos, wasPlaying), 5000);
         return;
       }
@@ -334,7 +334,7 @@ class Player extends EventTarget {
         return;
       }
       this.errors += 1;
-      this._emit('error', `Kunne ikke afspille "${this.current.Name}"`);
+      this._emit('error', t('player.cantPlay', { name: this.current.Name }));
       if (this.errors < 3) this.retryTimer = setTimeout(() => this.next(), 1500);
     });
   }

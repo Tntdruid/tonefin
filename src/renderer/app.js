@@ -1,5 +1,5 @@
 'use strict';
-/* global jf, Player, TICKS_PER_SECOND */
+/* global jf, Player, TICKS_PER_SECOND, t, errorText, applyStaticTexts, setLanguage, i18n */
 
 const $ = (sel) => document.querySelector(sel);
 const player = new Player();
@@ -23,21 +23,27 @@ function el(tag, props = {}, ...children) {
   return node;
 }
 
-function cleanError(e) {
+/** The raw message of an error from the main process (often a code such as "E_HTTP 404 /Items"). */
+function rawError(e) {
   const msg = (e && e.message) || String(e);
   return msg.replace(/^Error invoking remote method '[^']+': (\w*Error: )?/, '');
+}
+
+/** Error text for the user, in the chosen language. */
+function cleanError(e) {
+  return errorText(rawError(e));
 }
 
 async function api(path, query) {
   try {
     return await jf.api(path, query);
   } catch (e) {
-    const msg = cleanError(e);
-    if (/Login er udløbet/.test(msg)) {
+    const raw = rawError(e);
+    if (raw.startsWith('E_AUTH_EXPIRED')) {
       await jf.logout();
-      showLogin('Login er udløbet. Log ind igen.');
+      showLogin(t('login.expired'));
     }
-    throw new Error(msg);
+    throw new Error(raw);
   }
 }
 
@@ -54,7 +60,7 @@ function fmtTime(sec) {
   return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 }
 
-const ticksToSec = (t) => (t || 0) / TICKS_PER_SECOND;
+const ticksToSec = (ticks) => (ticks || 0) / TICKS_PER_SECOND;
 
 function artistsOf(item) {
   if (item.Artists && item.Artists.length) return item.Artists.join(', ');
@@ -81,11 +87,11 @@ function cover(item, size, cls = 'cover') {
 
 let toastTimer = null;
 function toast(msg) {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.remove('hidden');
+  const box = $('#toast');
+  box.textContent = msg;
+  box.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.add('hidden'), 4000);
+  toastTimer = setTimeout(() => box.classList.add('hidden'), 4000);
 }
 
 // Small per-computer settings (stored with the app's data, next to the exe).
@@ -124,7 +130,7 @@ $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('#login-btn');
   btn.disabled = true;
-  btn.textContent = 'Logger ind…';
+  btn.textContent = t('login.busy');
   $('#login-error').textContent = '';
   try {
     const s = await jf.login($('#login-server').value, $('#login-user').value, $('#login-pass').value);
@@ -134,7 +140,7 @@ $('#login-form').addEventListener('submit', async (e) => {
     $('#login-error').textContent = cleanError(err);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Log ind';
+    btn.textContent = t('login.btn');
   }
 });
 
@@ -174,7 +180,7 @@ $('#quick-btn').addEventListener('click', async () => {
       }
       if (Date.now() - started > 9 * 60 * 1000) {
         stopQuick();
-        $('#login-error').textContent = 'Koden er udløbet. Prøv igen.';
+        $('#login-error').textContent = t('quick.expired');
         return;
       }
       quickTimer = setTimeout(poll, 3000);
@@ -284,10 +290,10 @@ async function checkForUpdate(manual) {
     updateInfo = await jf.checkUpdate();
     const banner = $('#update-banner');
     banner.classList.toggle('hidden', !updateInfo.newer);
-    banner.textContent = `Ny version ${updateInfo.latest} – hent den`;
-    if (manual) toast(updateInfo.newer ? `Tonefin ${updateInfo.latest} er klar` : `Du har den nyeste version (${updateInfo.current})`);
+    banner.textContent = t('upd.banner', { v: updateInfo.latest });
+    if (manual) toast(updateInfo.newer ? t('upd.ready', { v: updateInfo.latest }) : t('upd.latest', { v: updateInfo.current }));
   } catch (e) {
-    if (manual) toast(`Kunne ikke tjekke for opdateringer: ${cleanError(e)}`);
+    if (manual) toast(t('upd.failed', { e: cleanError(e) }));
   }
   if (current && current.view === 'settings') render();
 }
@@ -317,13 +323,13 @@ function back() {
 async function render() {
   const seq = ++renderSeq;
   const content = $('#content');
-  content.replaceChildren(el('div', { class: 'loading' }, 'Henter…'));
+  content.replaceChildren(el('div', { class: 'loading' }, t('loading')));
   try {
     const node = await views[current.view](current.param);
     if (seq !== renderSeq) return;
     const top = el('div', { class: 'view' });
     if (navStack.length && !['home', 'albums', 'artists', 'songs', 'playlists', 'favorites', 'nowplaying', 'settings'].includes(current.view)) {
-      top.append(el('button', { class: 'link back', onclick: back }, '‹ Tilbage'));
+      top.append(el('button', { class: 'link back', onclick: back }, t('back')));
     }
     top.append(node);
     content.replaceChildren(top);
@@ -332,7 +338,7 @@ async function render() {
   } catch (err) {
     if (seq !== renderSeq) return;
     content.replaceChildren(
-      el('div', { class: 'empty' }, el('p', {}, cleanError(err)), el('button', { onclick: render }, 'Prøv igen')),
+      el('div', { class: 'empty' }, el('p', {}, cleanError(err)), el('button', { onclick: render }, t('retry'))),
     );
   }
 }
@@ -362,7 +368,7 @@ function card(item, { round = false, onOpen, onPlay }) {
       onPlay &&
         el('button', {
           class: 'card-play',
-          title: 'Afspil',
+          title: t('play'),
           onclick: (e) => {
             e.stopPropagation();
             onPlay();
@@ -375,7 +381,7 @@ function card(item, { round = false, onOpen, onPlay }) {
 }
 
 function grid(cards) {
-  if (!cards.length) return el('div', { class: 'empty' }, 'Intet fundet');
+  if (!cards.length) return el('div', { class: 'empty' }, t('nothingFound'));
   return el('div', { class: 'grid' }, cards);
 }
 
@@ -406,9 +412,9 @@ async function loadSidebarPlaylists() {
     box.replaceChildren(
       ...lists.map((p) => el('button', { title: p.Name, dataset: { id: p.Id }, onclick: () => navigate('playlist', p.Id) }, p.Name)),
     );
-    if (!lists.length) box.replaceChildren(el('div', { class: 'muted small' }, 'Ingen playlister'));
+    if (!lists.length) box.replaceChildren(el('div', { class: 'muted small' }, t('noPlaylists')));
   } catch {
-    box.replaceChildren(el('button', { class: 'muted small', onclick: loadSidebarPlaylists }, 'Kunne ikke hente – prøv igen'));
+    box.replaceChildren(el('button', { class: 'muted small', onclick: loadSidebarPlaylists }, t('loadFailed')));
   }
 }
 
@@ -425,7 +431,7 @@ function isFav(item) {
 function paintHeart(btn, on) {
   btn.textContent = on ? '♥' : '♡';
   btn.classList.toggle('on', on);
-  btn.title = on ? 'Fjern fra favoritter' : 'Tilføj til favoritter';
+  btn.title = on ? t('fav.remove') : t('fav.add');
 }
 
 function heart(item, cls = 'icon small') {
@@ -490,10 +496,10 @@ async function doToggleFav(item) {
       await jf.api(`/UserFavoriteItems/${item.Id}`, { userId: session.userId }, method);
     } catch (e) {
       // Servers older than 10.9 only have the old route.
-      if (!/ 404 /.test(cleanError(e))) throw e;
+      if (!rawError(e).startsWith('E_HTTP 404')) throw e;
       await jf.api(`/Users/${session.userId}/FavoriteItems/${item.Id}`, {}, method);
     }
-    toast(on ? `“${item.Name}” er tilføjet til favoritter` : `“${item.Name}” er fjernet fra favoritter`);
+    toast(t(on ? 'fav.added' : 'fav.removed', { name: item.Name }));
   } catch (e) {
     favOverride.set(item.Id, !on);
     repaintHearts(item.Id);
@@ -513,7 +519,7 @@ async function artistTracks(id) {
 async function playFrom(loader, opts) {
   try {
     const items = await loader();
-    if (!items.length) return toast('Ingen numre at afspille');
+    if (!items.length) return toast(t('noTracks'));
     player.playList(items, 0, opts);
   } catch (e) {
     toast(cleanError(e));
@@ -528,29 +534,29 @@ function albumCard(a) {
 }
 
 function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistsOf } = {}) {
-  const discs = new Set(items.map((t) => t.ParentIndexNumber || 1));
+  const discs = new Set(items.map((tr) => tr.ParentIndexNumber || 1));
   const rows = [];
   let lastDisc = null;
-  items.forEach((t, i) => {
-    if (numbers === 'index' && discs.size > 1 && t.ParentIndexNumber !== lastDisc) {
-      lastDisc = t.ParentIndexNumber;
-      rows.push(el('div', { class: 'disc' }, `Disk ${lastDisc || 1}`));
+  items.forEach((tr, i) => {
+    if (numbers === 'index' && discs.size > 1 && tr.ParentIndexNumber !== lastDisc) {
+      lastDisc = tr.ParentIndexNumber;
+      rows.push(el('div', { class: 'disc' }, t('disc', { n: lastDisc || 1 })));
     }
-    const num = numbers === 'index' ? t.IndexNumber || '' : i + 1;
+    const num = numbers === 'index' ? tr.IndexNumber || '' : i + 1;
     rows.push(
       el(
         'div',
-        { class: 'track', dataset: { id: t.Id }, ondblclick: () => player.playList(items, i), title: 'Dobbeltklik for at afspille' },
-        el('button', { class: 'track-num', onclick: () => player.playList(items, i), title: 'Afspil herfra' }, el('span', {}, num), el('i', {}, '▶')),
-        el('div', { class: 'track-main' }, el('div', { class: 'track-title' }, t.Name), el('div', { class: 'muted small' }, sub(t))),
-        showAlbum ? el('button', { class: 'link muted track-album', onclick: () => t.AlbumId && navigate('album', t.AlbumId) }, t.Album || '') : el('span'),
-        el('span', { class: 'muted track-dur' }, fmtTime(ticksToSec(t.RunTimeTicks))),
+        { class: 'track', dataset: { id: tr.Id }, ondblclick: () => player.playList(items, i), title: t('track.dblclick') },
+        el('button', { class: 'track-num', onclick: () => player.playList(items, i), title: t('track.playFromHere') }, el('span', {}, num), el('i', {}, '▶')),
+        el('div', { class: 'track-main' }, el('div', { class: 'track-title' }, tr.Name), el('div', { class: 'muted small' }, sub(tr))),
+        showAlbum ? el('button', { class: 'link muted track-album', onclick: () => tr.AlbumId && navigate('album', tr.AlbumId) }, tr.Album || '') : el('span'),
+        el('span', { class: 'muted track-dur' }, fmtTime(ticksToSec(tr.RunTimeTicks))),
         el(
           'span',
           { class: 'track-actions' },
-          heart(t),
-          el('button', { class: 'icon small', title: 'Afspil som næste', onclick: () => (player.playNext([t]), toast('Afspilles som næste')) }, '⤵'),
-          el('button', { class: 'icon small', title: 'Tilføj til kø', onclick: () => (player.enqueue([t]), toast('Tilføjet til køen')) }, '+'),
+          heart(tr),
+          el('button', { class: 'icon small', title: t('track.playNext'), onclick: () => (player.playNext([tr]), toast(t('track.playNextDone'))) }, '⤵'),
+          el('button', { class: 'icon small', title: t('track.addQueue'), onclick: () => (player.enqueue([tr]), toast(t('track.addedQueue'))) }, '+'),
         ),
       ),
     );
@@ -559,7 +565,7 @@ function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistsO
 }
 
 function collectionHeader(item, subtitle, tracks) {
-  const dur = tracks.reduce((s, t) => s + ticksToSec(t.RunTimeTicks), 0);
+  const dur = tracks.reduce((sum, tr) => sum + ticksToSec(tr.RunTimeTicks), 0);
   return el(
     'div',
     { class: 'collection-head' },
@@ -569,13 +575,13 @@ function collectionHeader(item, subtitle, tracks) {
       {},
       el('h1', {}, item.Name),
       subtitle,
-      el('p', { class: 'muted' }, `${tracks.length} numre · ${fmtTime(dur)}`),
+      el('p', { class: 'muted' }, `${t('n.tracks', { n: tracks.length })} · ${fmtTime(dur)}`),
       el(
         'div',
         { class: 'actions' },
-        el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, '▶ Afspil'),
-        el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, '⇄ Bland'),
-        el('button', { onclick: () => (player.enqueue(tracks), toast('Tilføjet til køen')) }, '+ Kø'),
+        el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, t('btn.play')),
+        el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, t('btn.shuffle')),
+        el('button', { onclick: () => (player.enqueue(tracks), toast(t('track.addedQueue'))) }, t('btn.queue')),
         item.Type !== 'Playlist' && tracks.length ? heart(item, 'icon big-heart') : null,
       ),
     ),
@@ -591,33 +597,30 @@ const views = {
       userItems({ IncludeItemTypes: 'Audio', SortBy: 'DatePlayed', SortOrder: 'Descending', Filters: 'IsPlayed', Limit: 15 }),
       userItems({ IncludeItemTypes: 'Audio', SortBy: 'PlayCount', SortOrder: 'Descending', Filters: 'IsPlayed', Limit: 15 }),
     ]);
-    const plays = (t) => {
-      const n = (t.UserData && t.UserData.PlayCount) || 0;
-      return `${artistsOf(t)} · ${n} ${n === 1 ? 'afspilning' : 'afspilninger'}`;
-    };
+    const plays = (tr) => `${artistsOf(tr)} · ${t('n.plays', { n: (tr.UserData && tr.UserData.PlayCount) || 0 })}`;
     const section = (title, items, node) =>
       items.length
-        ? [el('div', { class: 'title-row' }, el('h2', {}, title), el('button', { onclick: () => player.playList(items, 0) }, '▶ Afspil')), node]
+        ? [el('div', { class: 'title-row' }, el('h2', {}, title), el('button', { onclick: () => player.playList(items, 0) }, t('btn.play'))), node]
         : [];
     return el(
       'div',
       {},
-      el('h1', {}, `Hej ${session.userName}`),
-      latest.Items.length ? [el('h2', {}, 'Senest tilføjet'), grid(latest.Items.map(albumCard))] : null,
-      section('Senest afspillet', recent.Items, trackTable(recent.Items, { numbers: 'position' })),
-      section('Mest afspillet', most.Items, trackTable(most.Items, { numbers: 'position', sub: plays })),
-      !latest.Items.length && !recent.Items.length ? el('div', { class: 'empty' }, 'Intet endnu. Gå til Albums og start noget musik.') : null,
+      el('h1', {}, t('home.hello', { name: session.userName })),
+      latest.Items.length ? [el('h2', {}, t('home.latest')), grid(latest.Items.map(albumCard))] : null,
+      section(t('home.recent'), recent.Items, trackTable(recent.Items, { numbers: 'position' })),
+      section(t('home.most'), most.Items, trackTable(most.Items, { numbers: 'position', sub: plays })),
+      !latest.Items.length && !recent.Items.length ? el('div', { class: 'empty' }, t('home.empty')) : null,
     );
   },
 
   async albums() {
     const SORTS = {
-      name: { label: 'Navn', SortBy: 'SortName', SortOrder: 'Ascending' },
-      artist: { label: 'Kunstner', SortBy: 'AlbumArtist,SortName', SortOrder: 'Ascending' },
-      year: { label: 'År (nyeste først)', SortBy: 'ProductionYear,SortName', SortOrder: 'Descending' },
-      yearOld: { label: 'År (ældste først)', SortBy: 'ProductionYear,SortName', SortOrder: 'Ascending' },
-      added: { label: 'Senest tilføjet', SortBy: 'DateCreated', SortOrder: 'Descending' },
-      random: { label: 'Tilfældig', SortBy: 'Random', SortOrder: 'Ascending' },
+      name: { label: t('sort.name'), SortBy: 'SortName', SortOrder: 'Ascending' },
+      artist: { label: t('sort.artist'), SortBy: 'AlbumArtist,SortName', SortOrder: 'Ascending' },
+      year: { label: t('sort.year'), SortBy: 'ProductionYear,SortName', SortOrder: 'Descending' },
+      yearOld: { label: t('sort.yearOld'), SortBy: 'ProductionYear,SortName', SortOrder: 'Ascending' },
+      added: { label: t('sort.added'), SortBy: 'DateCreated', SortOrder: 'Descending' },
+      random: { label: t('sort.random'), SortBy: 'Random', SortOrder: 'Ascending' },
     };
     const sortKey = SORTS[prefs.get('albumSort', 'name')] ? prefs.get('albumSort', 'name') : 'name';
     const genres = await api('/Genres', { UserId: session.userId, IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', Recursive: true }).catch(() => ({ Items: [] }));
@@ -627,23 +630,23 @@ const views = {
     const res = await userItems({ IncludeItemTypes: 'MusicAlbum', SortBy, SortOrder, Fields: 'ProductionYear', GenreIds: genreId || undefined });
 
     const sortSelect = el('select', {
-      title: 'Sortér',
+      title: t('sort.title'),
       onchange: (e) => {
         prefs.set('albumSort', e.target.value);
         render();
       },
     }, Object.entries(SORTS).map(([k, v]) => el('option', { value: k, selected: k === sortKey }, v.label)));
     const genreSelect = el('select', {
-      title: 'Genre',
+      title: t('genre.title'),
       onchange: (e) => {
         prefs.set('albumGenre', e.target.value);
         render();
       },
-    }, el('option', { value: '' }, 'Alle genrer'), genres.Items.map((g) => el('option', { value: g.Id, selected: g.Id === genreId }, g.Name)));
+    }, el('option', { value: '' }, t('genre.all')), genres.Items.map((g) => el('option', { value: g.Id, selected: g.Id === genreId }, g.Name)));
     return el(
       'div',
       {},
-      el('div', { class: 'title-row' }, el('h1', {}, 'Albums'), el('span', { class: 'muted' }, `${res.Items.length} albums`), genreSelect, sortSelect),
+      el('div', { class: 'title-row' }, el('h1', {}, t('nav.albums')), el('span', { class: 'muted' }, t('n.albums', { n: res.Items.length })), genreSelect, sortSelect),
       grid(res.Items.map(albumCard)),
     );
   },
@@ -669,20 +672,31 @@ const views = {
       onchange: (e) => prefs.set('autoUpdateCheck', e.target.checked),
     });
     const version = updateInfo ? updateInfo.current : await jf.appVersion();
+    const langSelect = el('select', {
+      onchange: (e) => {
+        setLanguage(e.target.value);
+        languageChanged();
+      },
+    },
+    el('option', { value: 'auto', selected: i18n.setting === 'auto' }, t('set.langAuto')),
+    el('option', { value: 'da', selected: i18n.setting === 'da' }, 'Dansk'),
+    el('option', { value: 'en', selected: i18n.setting === 'en' }, 'English'));
     return el(
       'div',
       { class: 'settings' },
-      el('h1', {}, 'Indstillinger'),
-      el('h2', {}, 'Ens lydstyrke'),
-      el('p', { class: 'muted' }, 'Bruger Jellyfins lydstyrkeanalyse, så numre og albums spiller lige højt. Det kræver, at Jellyfins planlagte opgave "Audio Normalization" har kørt. Numre, der ikke er analyseret, spiller uændret.'),
-      radio('off', 'Fra', 'Spil numrene, som de er'),
-      radio('track', 'Pr. nummer', 'Alle numre spiller lige højt. Godt til blandede playlister.'),
-      radio('album', 'Pr. album', 'Albummet beholder sin forskel mellem stille og høje numre'),
-      el('h2', {}, 'Opdateringer'),
-      el('label', { class: 'option' }, auto, el('span', {}, el('b', {}, 'Tjek automatisk for nye versioner'), el('span', { class: 'muted small' }, 'Ved opstart og hver 6. time. Spørger kun GitHub om nyeste version.'))),
+      el('h1', {}, t('nav.settings')),
+      el('h2', {}, t('set.lang')),
+      el('p', {}, langSelect),
+      el('h2', {}, t('set.norm')),
+      el('p', { class: 'muted' }, t('set.normHelp')),
+      radio('off', t('set.normOff'), t('set.normOffHint')),
+      radio('track', t('set.normTrack'), t('set.normTrackHint')),
+      radio('album', t('set.normAlbum'), t('set.normAlbumHint')),
+      el('h2', {}, t('set.updates')),
+      el('label', { class: 'option' }, auto, el('span', {}, el('b', {}, t('set.autoUpdate')), el('span', { class: 'muted small' }, t('set.autoUpdateHint')))),
       el('p', { class: 'actions' },
-        el('button', { onclick: () => checkForUpdate(true) }, 'Søg efter opdateringer nu'),
-        updateInfo && updateInfo.newer ? el('button', { class: 'primary', onclick: () => jf.openRelease(updateInfo.url) }, `Hent ${updateInfo.latest}`) : null),
+        el('button', { onclick: () => checkForUpdate(true) }, t('set.checkNow')),
+        updateInfo && updateInfo.newer ? el('button', { class: 'primary', onclick: () => jf.openRelease(updateInfo.url) }, t('set.download', { v: updateInfo.latest })) : null),
       el('p', { class: 'muted small' }, `Tonefin ${version}`),
     );
   },
@@ -692,7 +706,7 @@ const views = {
     return el(
       'div',
       {},
-      el('h1', {}, 'Kunstnere'),
+      el('h1', {}, t('nav.artists')),
       grid(res.Items.map((a) => card(a, { round: true, onOpen: () => navigate('artist', a.Id), onPlay: () => playFrom(() => artistTracks(a.Id)) }))),
     );
   },
@@ -713,17 +727,17 @@ const views = {
           'div',
           {},
           el('h1', {}, artist.Name),
-          el('p', { class: 'muted' }, `${albums.Items.length} albums`),
+          el('p', { class: 'muted' }, t('n.albums', { n: albums.Items.length })),
           el(
             'div',
             { class: 'actions' },
-            el('button', { class: 'primary', onclick: () => playFrom(() => artistTracks(id)) }, '▶ Afspil alle'),
-            el('button', { onclick: () => playFrom(() => artistTracks(id), { shuffle: true }) }, '⇄ Bland'),
+            el('button', { class: 'primary', onclick: () => playFrom(() => artistTracks(id)) }, t('btn.playAll')),
+            el('button', { onclick: () => playFrom(() => artistTracks(id), { shuffle: true }) }, t('btn.shuffle')),
             heart(artist, 'icon big-heart'),
           ),
         ),
       ),
-      el('h2', {}, 'Albums'),
+      el('h2', {}, t('nav.albums')),
       grid(albums.Items.map(albumCard)),
     );
   },
@@ -740,14 +754,14 @@ const views = {
     return el(
       'div',
       {},
-      el('h1', {}, 'Playlister'),
+      el('h1', {}, t('nav.playlists')),
       grid(lists.map((p) => card(p, { onOpen: () => navigate('playlist', p.Id), onPlay: () => playFrom(() => playlistTracks(p.Id)) }))),
     );
   },
 
   async playlist(id) {
     const [pl, tracks] = await Promise.all([api(`/Users/${session.userId}/Items/${id}`), playlistTracks(id)]);
-    return el('div', {}, collectionHeader(pl, el('p', { class: 'muted' }, 'Playliste'), tracks), trackTable(tracks, { numbers: 'position' }));
+    return el('div', {}, collectionHeader(pl, el('p', { class: 'muted' }, t('playlist')), tracks), trackTable(tracks, { numbers: 'position' }));
   },
 
   async favorites() {
@@ -756,28 +770,28 @@ const views = {
       userItems({ Filters: 'IsFavorite', IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', Fields: 'ProductionYear' }),
       api('/Artists', { UserId: session.userId, IsFavorite: true, SortBy: 'SortName', ImageTypeLimit: 1 }),
     ]);
-    const parts = [el('h1', {}, 'Favoritter')];
+    const parts = [el('h1', {}, t('nav.favorites'))];
     if (songs.Items.length) {
       const tracks = songs.Items;
       parts.push(
         el(
           'div',
           { class: 'title-row' },
-          el('h2', {}, `Sange (${tracks.length})`),
-          el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, '▶ Afspil'),
-          el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, '⇄ Bland'),
+          el('h2', {}, `${t('nav.songs')} (${tracks.length})`),
+          el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, t('btn.play')),
+          el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, t('btn.shuffle')),
         ),
         trackTable(tracks, { numbers: 'position' }),
       );
     }
-    if (albums.Items.length) parts.push(el('h2', {}, `Albums (${albums.Items.length})`), grid(albums.Items.map(albumCard)));
+    if (albums.Items.length) parts.push(el('h2', {}, `${t('nav.albums')} (${albums.Items.length})`), grid(albums.Items.map(albumCard)));
     if (artists.Items.length)
       parts.push(
-        el('h2', {}, `Kunstnere (${artists.Items.length})`),
+        el('h2', {}, `${t('nav.artists')} (${artists.Items.length})`),
         grid(artists.Items.map((a) => card(a, { round: true, onOpen: () => navigate('artist', a.Id), onPlay: () => playFrom(() => artistTracks(a.Id)) }))),
       );
     if (parts.length === 1)
-      parts.push(el('div', { class: 'empty' }, 'Ingen favoritter endnu. Tryk på ♡ ved et nummer, et album eller en kunstner for at tilføje det.'));
+      parts.push(el('div', { class: 'empty' }, t('favs.empty')));
     return el('div', {}, parts);
   },
 
@@ -786,7 +800,7 @@ const views = {
     const res = await userItems({ IncludeItemTypes: 'Audio', SortBy: 'SortName', Limit: PAGE, StartIndex: 0 });
     const items = res.Items.slice();
     const wrap = el('div', {});
-    const more = el('button', {}, 'Indlæs flere');
+    const more = el('button', {}, t('songs.more'));
     const draw = () => {
       wrap.replaceChildren(trackTable(items, { numbers: 'position' }));
       more.classList.toggle('hidden', items.length >= res.TotalRecordCount);
@@ -810,7 +824,7 @@ const views = {
     return el(
       'div',
       {},
-      el('div', { class: 'title-row' }, el('h1', {}, 'Sange'), el('span', { class: 'muted' }, `${res.TotalRecordCount} numre`), el('button', { onclick: shuffleAll }, '⇄ Bland alle')),
+      el('div', { class: 'title-row' }, el('h1', {}, t('nav.songs')), el('span', { class: 'muted' }, t('n.tracks', { n: res.TotalRecordCount })), el('button', { onclick: shuffleAll }, t('btn.shuffleAll'))),
       wrap,
       el('div', { class: 'more' }, more),
     );
@@ -822,18 +836,18 @@ const views = {
       userItems({ SearchTerm: term, IncludeItemTypes: 'MusicAlbum', Limit: 24, Fields: 'ProductionYear' }),
       userItems({ SearchTerm: term, IncludeItemTypes: 'Audio', Limit: 50 }),
     ]);
-    const parts = [el('h1', {}, `Søgning: “${term}”`)];
+    const parts = [el('h1', {}, t('search.title', { q: term }))];
     if (artists.Items.length)
-      parts.push(el('h2', {}, 'Kunstnere'), grid(artists.Items.map((a) => card(a, { round: true, onOpen: () => navigate('artist', a.Id), onPlay: () => playFrom(() => artistTracks(a.Id)) }))));
-    if (albums.Items.length) parts.push(el('h2', {}, 'Albums'), grid(albums.Items.map(albumCard)));
-    if (songs.Items.length) parts.push(el('h2', {}, 'Sange'), trackTable(songs.Items, { numbers: 'position' }));
-    if (parts.length === 1) parts.push(el('div', { class: 'empty' }, 'Intet fundet'));
+      parts.push(el('h2', {}, t('nav.artists')), grid(artists.Items.map((a) => card(a, { round: true, onOpen: () => navigate('artist', a.Id), onPlay: () => playFrom(() => artistTracks(a.Id)) }))));
+    if (albums.Items.length) parts.push(el('h2', {}, t('nav.albums')), grid(albums.Items.map(albumCard)));
+    if (songs.Items.length) parts.push(el('h2', {}, t('nav.songs')), trackTable(songs.Items, { numbers: 'position' }));
+    if (parts.length === 1) parts.push(el('div', { class: 'empty' }, t('nothingFound')));
     return el('div', {}, parts);
   },
 
   async nowplaying() {
-    const t = player.current;
-    if (!t) return el('div', { class: 'empty' }, el('h1', {}, 'Spiller nu'), el('p', { class: 'muted' }, 'Intet spiller. Vælg et album eller en playliste.'));
+    const cur = player.current;
+    if (!cur) return el('div', { class: 'empty' }, el('h1', {}, t('nav.nowplaying')), el('p', { class: 'muted' }, t('np.empty')));
     const queue = player.queue.map((q, i) =>
       el(
         'div',
@@ -851,18 +865,18 @@ const views = {
       el(
         'div',
         { class: 'np-hero' },
-        cover(t, 600, 'cover huge'),
+        cover(cur, 600, 'cover huge'),
         el(
           'div',
           {},
-          el('div', { class: 'muted small' }, 'SPILLER NU'),
-          el('h1', {}, t.Name),
-          el('p', {}, artistsOf(t)),
-          t.AlbumId ? el('button', { class: 'link muted', onclick: () => navigate('album', t.AlbumId) }, t.Album || '') : null,
-          el('div', { class: 'actions' }, heart(t, 'icon big-heart')),
+          el('div', { class: 'muted small' }, t('np.label')),
+          el('h1', {}, cur.Name),
+          el('p', {}, artistsOf(cur)),
+          cur.AlbumId ? el('button', { class: 'link muted', onclick: () => navigate('album', cur.AlbumId) }, cur.Album || '') : null,
+          el('div', { class: 'actions' }, heart(cur, 'icon big-heart')),
         ),
       ),
-      el('div', { class: 'title-row' }, el('h2', {}, `Kø (${player.queue.length})`), el('button', { onclick: () => player.shuffleQueue() }, '⇄ Bland'), el('button', { onclick: () => player.clearQueue() }, 'Ryd kø')),
+      el('div', { class: 'title-row' }, el('h2', {}, t('np.queue', { n: player.queue.length })), el('button', { onclick: () => player.shuffleQueue() }, t('btn.shuffle')), el('button', { onclick: () => player.clearQueue() }, t('np.clear'))),
       el('div', { class: 'tracks' }, queue),
     );
   },
@@ -877,31 +891,31 @@ function markPlaying() {
 
 let lastTrack = null;
 function updateTrack() {
-  const t = player.current;
-  if (lastTrack && lastTrack !== t) {
+  const cur = player.current;
+  if (lastTrack && lastTrack !== cur) {
     // The server may have reacted to the finished track (heart, new artist playlist).
     const prev = lastTrack;
     setTimeout(() => refreshFav(prev), 3000);
     refreshSidebarPlaylistsSoon();
   }
-  lastTrack = t;
-  $('#bar-title').textContent = t ? t.Name : 'Intet spiller';
-  $('#bar-artist').textContent = t ? artistsOf(t) : '';
+  lastTrack = cur;
+  $('#bar-title').textContent = cur ? cur.Name : t('bar.nothing');
+  $('#bar-artist').textContent = cur ? artistsOf(cur) : '';
   const img = $('#bar-cover');
-  const url = imageUrl(t, 120);
+  const url = imageUrl(cur, 120);
   img.classList.toggle('hidden', !url);
   if (url) img.src = url;
   const fav = $('#bar-fav');
-  fav.classList.toggle('hidden', !t);
-  if (t) {
-    fav.dataset.fav = t.Id;
-    paintHeart(fav, isFav(t));
+  fav.classList.toggle('hidden', !cur);
+  if (cur) {
+    fav.dataset.fav = cur.Id;
+    paintHeart(fav, isFav(cur));
   }
   markPlaying();
   if (current && current.view === 'nowplaying') render();
   updateMediaSession();
   updateTime();
-  document.title = t ? `${t.Name} – ${artistsOf(t)}` : 'Tonefin';
+  document.title = cur ? `${cur.Name} – ${artistsOf(cur)}` : 'Tonefin';
 }
 
 let seeking = false;
@@ -928,16 +942,16 @@ function updateState() {
 
 function updateMediaSession() {
   if (!('mediaSession' in navigator)) return;
-  const t = player.current;
-  if (!t) {
+  const cur = player.current;
+  if (!cur) {
     navigator.mediaSession.metadata = null;
     return;
   }
-  const art = imageUrl(t, 512);
+  const art = imageUrl(cur, 512);
   navigator.mediaSession.metadata = new MediaMetadata({
-    title: t.Name,
-    artist: artistsOf(t),
-    album: t.Album || '',
+    title: cur.Name,
+    artist: artistsOf(cur),
+    album: cur.Album || '',
     artwork: art ? [{ src: art, sizes: '512x512', type: 'image/jpeg' }] : [],
   });
 }
@@ -971,22 +985,22 @@ player.addEventListener('time', () => {
 window.addEventListener('beforeunload', saveQueue);
 
 const REPEAT = {
-  RepeatNone: { next: 'RepeatAll', title: 'Gentag: fra', text: '↻' },
-  RepeatAll: { next: 'RepeatOne', title: 'Gentag: hele køen', text: '↻' },
-  RepeatOne: { next: 'RepeatNone', title: 'Gentag: dette nummer', text: '↻¹' },
+  RepeatNone: { next: 'RepeatAll', text: '↻' },
+  RepeatAll: { next: 'RepeatOne', text: '↻' },
+  RepeatOne: { next: 'RepeatNone', text: '↻¹' },
 };
 function paintRepeat() {
   const r = REPEAT[player.repeatMode];
   const b = $('#btn-repeat');
   b.textContent = r.text;
-  b.title = r.title;
+  b.title = t('repeat.' + player.repeatMode);
   b.classList.toggle('on', player.repeatMode !== 'RepeatNone');
 }
 $('#btn-repeat').addEventListener('click', () => {
   player.setRepeat(REPEAT[player.repeatMode].next);
   prefs.set('repeat', player.repeatMode);
   paintRepeat();
-  toast(REPEAT[player.repeatMode].title);
+  toast(t('repeat.' + player.repeatMode));
 });
 player.setRepeat(prefs.get('repeat', 'RepeatNone'));
 paintRepeat();
@@ -1010,7 +1024,7 @@ $('#btn-next').addEventListener('click', () => player.next());
 $('#btn-prev').addEventListener('click', () => player.prev());
 $('#btn-shuffle').addEventListener('click', () => {
   player.shuffleQueue();
-  toast('Køen er blandet');
+  toast(t('queue.shuffled'));
 });
 $('#btn-queue').addEventListener('click', () => navigate('nowplaying'));
 $('#bar-track').addEventListener('click', () => player.current && navigate('nowplaying'));
@@ -1060,18 +1074,21 @@ document.addEventListener('mouseup', (e) => {
 
 // ---------- reporting status, sleep and network ----------
 
+let lastReportStatus = null;
 function showReportStatus(s) {
+  lastReportStatus = s;
   const node = $('#report-status');
   if (!s || !s.lastOk) {
     node.className = 'report-status';
-    node.textContent = 'Klar til at rapportere';
+    node.textContent = t('report.ready');
     node.title = '';
     return;
   }
   node.className = 'report-status ' + (s.ok ? 'ok' : 'bad');
-  const time = new Date(s.lastOk).toLocaleTimeString('da-DK');
-  node.textContent = s.ok ? 'Rapporterer til Jellyfin' : 'Jellyfin svarer ikke – prøver igen';
-  node.title = s.ok ? `Sidst rapporteret ${time}` : `${s.lastError}\nSidst rapporteret ${time}`;
+  const time = new Date(s.lastOk).toLocaleTimeString(i18n.locale());
+  node.textContent = s.ok ? t('report.ok') : t('report.bad');
+  const last = t('report.last', { t: time });
+  node.title = s.ok ? last : `${errorText(s.lastError)}\n${last}`;
 }
 jf.onReportStatus(showReportStatus);
 
@@ -1088,6 +1105,22 @@ window.addEventListener('online', () => {
 jf.onResume(() => setTimeout(() => player.recover(), 3000));
 
 // ---------- start ----------
+
+/** Redraws everything that shows text after the language was changed. */
+function languageChanged() {
+  applyStaticTexts();
+  paintRepeat();
+  updateTrack();
+  showReportStatus(lastReportStatus);
+  if (updateInfo) $('#update-banner').textContent = t('upd.banner', { v: updateInfo.latest });
+  if (session) {
+    loadSidebarPlaylists();
+    render();
+  }
+}
+
+applyStaticTexts();
+updateTrack();
 
 (async () => {
   const s = await jf.getSession();

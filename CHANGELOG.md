@@ -11,6 +11,7 @@
 - The queue and position are remembered: after a restart the song waits paused where you left off, and nothing is reported to Jellyfin until you press play
 - Equal loudness using Jellyfin's audio normalization, per song or per album (Settings). Requires Jellyfin's "Audio Normalization" task to have run.
 - Checks GitHub for new versions at startup and every 6 hours and shows a "new version" button in the sidebar (can be turned off in Settings)
+- The app is now in English and Danish. It follows the Windows language, and you can switch under Settings.
 - New Settings page
 
 🇩🇰
@@ -20,6 +21,7 @@
 - Køen og positionen huskes: efter en genstart venter nummeret på pause, hvor du slap, og intet rapporteres til Jellyfin, før du trykker afspil
 - Ens lydstyrke med Jellyfins lydstyrkenormalisering, pr. nummer eller pr. album (Indstillinger). Kræver, at Jellyfins opgave "Audio Normalization" har kørt.
 - Tjekker GitHub for nye versioner ved opstart og hver 6. time og viser en "ny version"-knap i sidepanelet (kan slås fra i Indstillinger)
+- Appen findes nu på engelsk og dansk. Den følger Windows' sprog, og du kan skifte under Indstillinger.
 - Ny side med indstillinger
 
 ## 0.2.2

@@ -5,9 +5,14 @@ const CLIENT_NAME = 'Tonefin';
 /** Turns "10.10.1.33:8096/" into "http://10.10.1.33:8096". */
 function normalizeServer(input) {
   let s = String(input || '').trim();
-  if (!s) throw new Error('Skriv serverens adresse');
+  if (!s) throw new Error('E_NO_SERVER');
   if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
-  const url = new URL(s);
+  let url;
+  try {
+    url = new URL(s);
+  } catch {
+    throw new Error('E_BAD_URL');
+  }
   return (url.origin + url.pathname).replace(/\/+$/, '');
 }
 
@@ -59,11 +64,12 @@ class JellyfinClient {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (e) {
-      const why = e && e.name === 'TimeoutError' ? 'svarede ikke i tide' : 'kunne ikke nås';
-      throw new JellyfinError(`Jellyfin ${why} (${this.server})`, 0);
+      // Errors are codes; the window turns them into Danish or English text.
+      const code = e && e.name === 'TimeoutError' ? 'E_TIMEOUT' : 'E_UNREACHABLE';
+      throw new JellyfinError(`${code} ${this.server}`, 0);
     }
     if (!res.ok) {
-      const msg = res.status === 401 ? 'Login er udløbet eller forkert' : `Jellyfin svarede ${res.status} på ${path}`;
+      const msg = res.status === 401 ? 'E_AUTH_EXPIRED' : `E_HTTP ${res.status} ${path}`;
       throw new JellyfinError(msg, res.status);
     }
     const text = await res.text();
@@ -81,7 +87,7 @@ class JellyfinClient {
     try {
       result = await this.request('POST', '/Users/AuthenticateByName', { body: { Username: username, Pw: password || '' } });
     } catch (e) {
-      if (e.status === 401) throw new JellyfinError('Forkert brugernavn eller kodeord', 401);
+      if (e.status === 401) throw new JellyfinError('E_BAD_LOGIN', 401);
       throw e;
     }
     this.token = result.AccessToken;
@@ -92,7 +98,7 @@ class JellyfinClient {
   async quickConnectStart() {
     await this.request('GET', '/System/Info/Public');
     const enabled = await this.request('GET', '/QuickConnect/Enabled').catch(() => false);
-    if (enabled !== true) throw new JellyfinError('Lyn-forbind er slået fra på serveren', 0);
+    if (enabled !== true) throw new JellyfinError('E_QC_DISABLED', 0);
     const res = await this.request('POST', '/QuickConnect/Initiate');
     return { code: res.Code, secret: res.Secret };
   }

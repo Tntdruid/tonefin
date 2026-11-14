@@ -12,46 +12,46 @@
     <form id="login-form" class="login-box">
       <img src="../../assets/icon.png" alt="" class="login-logo">
       <h1>Tonefin</h1>
-      <p class="muted small tagline">En musikafspiller til Jellyfin</p>
-      <label>Server<input id="login-server" placeholder="http://10.10.1.33:8096" autocomplete="url" required></label>
-      <label class="pw">Brugernavn<input id="login-user" autocomplete="username" required></label>
-      <label class="pw">Kodeord<input id="login-pass" type="password" autocomplete="current-password"></label>
-      <button type="submit" id="login-btn" class="primary">Log ind</button>
-      <div class="or muted small">eller</div>
-      <button type="button" id="quick-btn">Log ind med Lyn-forbind</button>
+      <p class="muted small tagline" data-i18n="login.tagline"></p>
+      <label><span data-i18n="login.server"></span><input id="login-server" placeholder="http://10.10.1.33:8096" autocomplete="url" required></label>
+      <label class="pw"><span data-i18n="login.user"></span><input id="login-user" autocomplete="username" required></label>
+      <label class="pw"><span data-i18n="login.pass"></span><input id="login-pass" type="password" autocomplete="current-password"></label>
+      <button type="submit" id="login-btn" class="primary" data-i18n="login.btn"></button>
+      <div class="or muted small" data-i18n="login.or"></div>
+      <button type="button" id="quick-btn" data-i18n="login.quick"></button>
       <div id="quick-box" class="quick hidden">
-        <div class="muted small">Din kode til Lyn-forbind</div>
+        <div class="muted small" data-i18n="quick.label"></div>
         <div id="quick-code" class="quick-code"></div>
-        <p class="muted small">Åbn Jellyfin i browseren eller på telefonen, hvor du er logget ind. Gå til <b>Brugermenu → Lyn-forbind</b>, skriv koden og tryk <b>Tillad</b>. Appen logger selv ind bagefter.</p>
-        <button type="button" id="quick-cancel" class="link muted">Annullér</button>
+        <p class="muted small" data-i18n-html="quick.help"></p>
+        <button type="button" id="quick-cancel" class="link muted" data-i18n="quick.cancel"></button>
       </div>
       <p id="login-error" class="error"></p>
-      <p class="muted small">Kodeordet gemmes ikke. Appen husker kun den adgangsnøgle, Jellyfin giver ved login.</p>
+      <p class="muted small" data-i18n="login.note"></p>
     </form>
   </section>
 
   <section id="app" class="app hidden">
     <aside class="sidebar">
       <div class="brand"><img src="../../assets/icon.png" alt=""><span>Tonefin</span></div>
-      <input id="search" type="search" placeholder="Søg…" autocomplete="off">
+      <input id="search" type="search" data-i18n-placeholder="search.placeholder" autocomplete="off">
       <nav>
-        <button data-nav="home">Hjem</button>
-        <button data-nav="albums">Albums</button>
-        <button data-nav="artists">Kunstnere</button>
-        <button data-nav="songs">Sange</button>
-        <button data-nav="playlists">Playlister</button>
-        <button data-nav="favorites">Favoritter</button>
-        <button data-nav="nowplaying">Spiller nu</button>
+        <button data-nav="home" data-i18n="nav.home"></button>
+        <button data-nav="albums" data-i18n="nav.albums"></button>
+        <button data-nav="artists" data-i18n="nav.artists"></button>
+        <button data-nav="songs" data-i18n="nav.songs"></button>
+        <button data-nav="playlists" data-i18n="nav.playlists"></button>
+        <button data-nav="favorites" data-i18n="nav.favorites"></button>
+        <button data-nav="nowplaying" data-i18n="nav.nowplaying"></button>
       </nav>
-      <div class="side-title muted small">PLAYLISTER</div>
+      <div class="side-title muted small" data-i18n="side.playlists"></div>
       <div id="side-playlists" class="side-playlists"></div>
       <div class="sidebar-foot">
         <button id="update-banner" class="update hidden"></button>
-        <div id="report-status" class="report-status" title="">Ikke startet</div>
+        <div id="report-status" class="report-status" title=""></div>
         <div class="muted small" id="user-line"></div>
-        <button id="logout" class="link">Log ud</button>
-        <button data-nav="settings" class="link">Indstillinger</button>
-        <button id="open-log" class="link">Vis log</button>
+        <button id="logout" class="link" data-i18n="logout"></button>
+        <button data-nav="settings" class="link" data-i18n="nav.settings"></button>
+        <button id="open-log" class="link" data-i18n="showLog"></button>
       </div>
     </aside>
     <main id="content" class="content"></main>
@@ -59,19 +59,19 @@
       <div class="bar-track" id="bar-track">
         <img id="bar-cover" class="hidden" alt="">
         <div class="bar-text">
-          <div id="bar-title" class="title">Intet spiller</div>
+          <div id="bar-title" class="title"></div>
           <div id="bar-artist" class="muted"></div>
         </div>
-        <button id="bar-fav" class="icon heart hidden" title="Tilføj til favoritter">♡</button>
+        <button id="bar-fav" class="icon heart hidden">♡</button>
       </div>
       <div class="bar-center">
         <div class="controls">
-          <button id="btn-shuffle" class="icon" title="Bland køen">⇄</button>
-          <button id="btn-prev" class="icon" title="Forrige">⏮</button>
-          <button id="btn-play" class="icon big" title="Afspil/pause">▶</button>
-          <button id="btn-next" class="icon" title="Næste">⏭</button>
-          <button id="btn-repeat" class="icon" title="Gentag: fra">↻</button>
-          <button id="btn-queue" class="icon" title="Kø">☰</button>
+          <button id="btn-shuffle" class="icon" data-i18n-title="bar.shuffle">⇄</button>
+          <button id="btn-prev" class="icon" data-i18n-title="bar.prev">⏮</button>
+          <button id="btn-play" class="icon big" data-i18n-title="bar.play">▶</button>
+          <button id="btn-next" class="icon" data-i18n-title="bar.next">⏭</button>
+          <button id="btn-repeat" class="icon">↻</button>
+          <button id="btn-queue" class="icon" data-i18n-title="bar.queue">☰</button>
         </div>
         <div class="seek">
           <span id="time-pos">0:00</span>
@@ -86,6 +86,7 @@
   </section>
   <div id="toast" class="toast hidden"></div>
 
+  <script src="i18n.js"></script>
   <script src="player.js"></script>
   <script src="app.js"></script>
 </body>
