@@ -23,6 +23,7 @@ const tracks = [1, 2, 3].map((n) => ({
   AlbumId: album.Id,
   AlbumArtist: 'Testkunstner',
   Artists: ['Testkunstner'],
+  ArtistItems: [{ Name: 'Testkunstner', Id: 'art1' }],
   IndexNumber: n,
   ParentIndexNumber: 1,
   RunTimeTicks: 12 * TICKS,

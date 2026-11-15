@@ -2,6 +2,14 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.3.1
+
+🇬🇧
+- Artist names are links to the artist's page: on "Now playing", in the player bar, in song lists and in the queue. Songs with several artists get a link per artist.
+
+🇩🇰
+- Kunstnernavne er links til kunstnerens side: på "Spiller nu", i afspillerlinjen, i sanglister og i køen. Numre med flere kunstnere får et link pr. kunstner.
+
 ## 0.3.0
 
 🇬🇧

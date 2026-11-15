@@ -156,3 +156,5 @@ select:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
 .settings .option:hover { background: var(--panel-2); }
 .settings .option input { margin-top: 3px; accent-color: var(--accent-2); }
 .settings .option > span { display: flex; flex-direction: column; gap: 2px; }
+.artist-link { color: inherit; }
+.artist-link:hover { color: var(--text); text-decoration: underline; }

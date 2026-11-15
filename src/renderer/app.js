@@ -67,6 +67,26 @@ function artistsOf(item) {
   return item.AlbumArtist || '';
 }
 
+/** The song's artists as links to their artist pages (plain text for artists Jellyfin has no id for). */
+function artistLinks(item) {
+  const people = (item.ArtistItems && item.ArtistItems.length ? item.ArtistItems : item.AlbumArtists) || [];
+  if (!people.length) return [artistsOf(item)];
+  return people.flatMap((a, i) => [
+    i ? ', ' : null,
+    a.Id
+      ? el('button', {
+        class: 'link artist-link',
+        title: a.Name,
+        onclick: (e) => {
+          e.stopPropagation();
+          navigate('artist', a.Id);
+        },
+        ondblclick: (e) => e.stopPropagation(),
+      }, a.Name)
+      : a.Name,
+  ]);
+}
+
 function imageUrl(item, size = 300) {
   if (!item) return null;
   let id, tag;
@@ -223,7 +243,7 @@ function startApp(s) {
 // ---------- remember the queue ----------
 
 const SAVED_FIELDS = ['Id', 'Name', 'Type', 'Album', 'AlbumId', 'AlbumArtist', 'Artists', 'RunTimeTicks', 'IndexNumber',
-  'ParentIndexNumber', 'ImageTags', 'AlbumPrimaryImageTag', 'NormalizationGain'];
+  'ParentIndexNumber', 'ImageTags', 'AlbumPrimaryImageTag', 'NormalizationGain', 'ArtistItems', 'AlbumArtists'];
 const MAX_SAVED = 1000;
 
 function queueKey() {
@@ -533,7 +553,7 @@ function albumCard(a) {
   });
 }
 
-function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistsOf } = {}) {
+function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistLinks } = {}) {
   const discs = new Set(items.map((tr) => tr.ParentIndexNumber || 1));
   const rows = [];
   let lastDisc = null;
@@ -853,7 +873,7 @@ const views = {
         'div',
         { class: 'track' + (i === player.index ? ' playing' : '') + (i < player.index ? ' past' : ''), ondblclick: () => player.playIndex(i) },
         el('button', { class: 'track-num', onclick: () => player.playIndex(i) }, el('span', {}, i + 1), el('i', {}, '▶')),
-        el('div', { class: 'track-main' }, el('div', { class: 'track-title' }, q.Name), el('div', { class: 'muted small' }, artistsOf(q))),
+        el('div', { class: 'track-main' }, el('div', { class: 'track-title' }, q.Name), el('div', { class: 'muted small' }, artistLinks(q))),
         el('span', { class: 'muted' }, q.Album || ''),
         el('span', { class: 'muted track-dur' }, fmtTime(ticksToSec(q.RunTimeTicks))),
         el('span'),
@@ -871,7 +891,7 @@ const views = {
           {},
           el('div', { class: 'muted small' }, t('np.label')),
           el('h1', {}, cur.Name),
-          el('p', {}, artistsOf(cur)),
+          el('p', {}, artistLinks(cur)),
           cur.AlbumId ? el('button', { class: 'link muted', onclick: () => navigate('album', cur.AlbumId) }, cur.Album || '') : null,
           el('div', { class: 'actions' }, heart(cur, 'icon big-heart')),
         ),
@@ -900,7 +920,7 @@ function updateTrack() {
   }
   lastTrack = cur;
   $('#bar-title').textContent = cur ? cur.Name : t('bar.nothing');
-  $('#bar-artist').textContent = cur ? artistsOf(cur) : '';
+  $('#bar-artist').replaceChildren(...(cur ? artistLinks(cur) : []).filter((x) => x !== null));
   const img = $('#bar-cover');
   const url = imageUrl(cur, 120);
   img.classList.toggle('hidden', !url);
