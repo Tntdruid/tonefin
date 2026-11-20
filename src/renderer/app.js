@@ -1,5 +1,5 @@
 'use strict';
-/* global jf, Player, TICKS_PER_SECOND, t, errorText, applyStaticTexts, setLanguage, i18n */
+/* global jf, Player, TICKS_PER_SECOND, t, errorText, applyStaticTexts, setLanguage, i18n, ignoreShortcut */
 
 const $ = (sel) => document.querySelector(sel);
 const player = new Player();
@@ -44,6 +44,15 @@ async function api(path, query) {
       showLogin(t('login.expired'));
     }
     throw new Error(raw);
+  }
+}
+
+/** POST/DELETE etc. with the same error handling as api(). */
+async function apiCall(method, path, query, body) {
+  try {
+    return await jf.api(path, query || {}, method, body);
+  } catch (e) {
+    throw new Error(rawError(e));
   }
 }
 
@@ -553,7 +562,7 @@ function albumCard(a) {
   });
 }
 
-function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistLinks } = {}) {
+function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistLinks, onRemove = null } = {}) {
   const discs = new Set(items.map((tr) => tr.ParentIndexNumber || 1));
   const rows = [];
   let lastDisc = null;
@@ -575,6 +584,9 @@ function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistLi
           'span',
           { class: 'track-actions' },
           heart(tr),
+          el('button', { class: 'icon small', title: t('mix.title'), onclick: () => startMix(tr) }, '◎'),
+          el('button', { class: 'icon small', title: t('pl.addTo'), onclick: () => addToPlaylist([tr]) }, '≡'),
+          onRemove ? el('button', { class: 'icon small', title: t('pl.removeFrom'), onclick: () => onRemove(tr) }, '−') : null,
           el('button', { class: 'icon small', title: t('track.playNext'), onclick: () => (player.playNext([tr]), toast(t('track.playNextDone'))) }, '⤵'),
           el('button', { class: 'icon small', title: t('track.addQueue'), onclick: () => (player.enqueue([tr]), toast(t('track.addedQueue'))) }, '+'),
         ),
@@ -584,7 +596,7 @@ function trackTable(items, { showAlbum = true, numbers = 'index', sub = artistLi
   return el('div', { class: 'tracks' + (showAlbum ? '' : ' no-album') }, rows);
 }
 
-function collectionHeader(item, subtitle, tracks) {
+function collectionHeader(item, subtitle, tracks, extraActions = []) {
   const dur = tracks.reduce((sum, tr) => sum + ticksToSec(tr.RunTimeTicks), 0);
   return el(
     'div',
@@ -602,10 +614,163 @@ function collectionHeader(item, subtitle, tracks) {
         el('button', { class: 'primary', onclick: () => player.playList(tracks, 0) }, t('btn.play')),
         el('button', { onclick: () => player.playList(tracks, 0, { shuffle: true }) }, t('btn.shuffle')),
         el('button', { onclick: () => (player.enqueue(tracks), toast(t('track.addedQueue'))) }, t('btn.queue')),
+        tracks.length ? el('button', { title: t('mix.title'), onclick: () => startMix(item) }, t('btn.mix')) : null,
+        item.Type !== 'Playlist' && tracks.length ? el('button', { onclick: () => addToPlaylist(tracks) }, t('btn.toPlaylist')) : null,
+        ...extraActions,
         item.Type !== 'Playlist' && tracks.length ? heart(item, 'icon big-heart') : null,
       ),
     ),
   );
+}
+
+// ---------- instant mix / radio ----------
+
+async function instantMix(item) {
+  const res = await api(`/Items/${item.Id}/InstantMix`, { UserId: session.userId, Limit: 100 });
+  return res.Items || [];
+}
+
+/** Starts an endless mix based on a song, album, artist or playlist. */
+function startMix(item) {
+  playFrom(() => instantMix(item), { radio: true });
+  toast(t('mix.started', { name: item.Name }));
+}
+
+let toppingUp = false;
+/** When a radio queue is about to run out, add more songs similar to the one playing. */
+async function topUpRadio() {
+  if (!player.radio || toppingUp || player.index < player.queue.length - 3 || !player.current) return;
+  toppingUp = true;
+  try {
+    const seen = new Set(player.queue.map((i) => i.Id));
+    const more = (await instantMix(player.current)).filter((i) => !seen.has(i.Id));
+    if (more.length && player.radio) player.enqueue(more.slice(0, 50));
+  } catch {
+    /* try again on the next song */
+  } finally {
+    toppingUp = false;
+  }
+}
+player.addEventListener('track', topUpRadio);
+
+// ---------- dialogs and playlists ----------
+
+/** A small modal. buttons: [{ label, value, primary, danger }]. Resolves with the chosen value (null on Escape/backdrop). */
+function dialog({ title, body = [], buttons = [] }) {
+  return new Promise((resolve) => {
+    const close = (value) => {
+      document.removeEventListener('keydown', onKey, true);
+      overlay.remove();
+      resolve(value);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        close(null);
+      }
+    };
+    const box = el('div', { class: 'dialog', role: 'dialog' },
+      el('h2', {}, title),
+      body,
+      el('div', { class: 'dialog-buttons' }, buttons.map((b) =>
+        el('button', { class: b.primary ? 'primary' : b.danger ? 'danger' : '', type: b.submit ? 'submit' : 'button', onclick: () => !b.submit && close(b.value) }, b.label))));
+    const overlay = el('div', { class: 'overlay', onclick: (e) => e.target === overlay && close(null) }, box);
+    box.addEventListener('submit', (e) => e.preventDefault());
+    overlay.close = close;
+    document.addEventListener('keydown', onKey, true);
+    document.body.append(overlay);
+    const first = box.querySelector('input, .dialog-list button, .dialog-buttons .primary');
+    if (first) first.focus();
+  });
+}
+
+function askName(title, initial = '', okLabel = t('ok')) {
+  const input = el('input', { value: initial, maxlength: 200, placeholder: t('pl.namePlaceholder') });
+  const p = dialog({
+    title,
+    body: [input],
+    buttons: [{ label: t('cancel'), value: null }, { label: okLabel, value: 'ok', primary: true }],
+  }).then((v) => (v === 'ok' && input.value.trim() ? input.value.trim() : null));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') input.closest('.overlay').close('ok');
+  });
+  setTimeout(() => input.select(), 0);
+  return p;
+}
+
+const audioIds = (items) => items.filter((i) => i.Type === 'Audio').map((i) => i.Id);
+
+async function createPlaylist(items) {
+  const name = await askName(t('pl.newTitle'), '', t('pl.create'));
+  if (!name) return null;
+  try {
+    const res = await apiCall('POST', '/Playlists', {}, { Name: name, Ids: audioIds(items), UserId: session.userId, MediaType: 'Audio', IsPublic: false });
+    toast(t('pl.created', { name }));
+    loadSidebarPlaylists();
+    if (current && current.view === 'playlists') render();
+    return res && res.Id;
+  } catch (e) {
+    toast(cleanError(e));
+    return null;
+  }
+}
+
+async function addToPlaylist(items) {
+  const ids = audioIds(items);
+  if (!ids.length) return;
+  let lists = [];
+  try {
+    lists = await musicPlaylists();
+  } catch (e) {
+    return toast(cleanError(e));
+  }
+  const NEW = '\u0000new';
+  const choice = await dialog({
+    title: ids.length === 1 ? t('pl.addOne', { name: items[0].Name }) : t('pl.addMany', { n: ids.length }),
+    body: [el('div', { class: 'dialog-list' },
+      lists.map((p) => el('button', { onclick: (e) => e.target.closest('.overlay').close(p.Id) }, p.Name)),
+      el('button', { class: 'new', onclick: (e) => e.target.closest('.overlay').close(NEW) }, t('pl.newDots')))],
+    buttons: [{ label: t('cancel'), value: null }],
+  });
+  if (!choice) return;
+  if (choice === NEW) return createPlaylist(items);
+  const pl = lists.find((p) => p.Id === choice);
+  try {
+    await apiCall('POST', `/Playlists/${choice}/Items`, { Ids: ids.join(','), UserId: session.userId });
+    toast(t('pl.added', { name: pl ? pl.Name : '' }));
+    if (current && current.view === 'playlist' && current.param === choice) render();
+  } catch (e) {
+    toast(cleanError(e));
+  }
+}
+
+async function renamePlaylist(pl) {
+  const name = await askName(t('pl.rename'), pl.Name);
+  if (!name || name === pl.Name) return;
+  try {
+    await apiCall('POST', `/Playlists/${pl.Id}`, {}, { Name: name });
+    loadSidebarPlaylists();
+    render();
+  } catch (e) {
+    toast(cleanError(e));
+  }
+}
+
+async function deletePlaylist(pl) {
+  const ok = await dialog({
+    title: t('pl.deleteTitle', { name: pl.Name }),
+    body: [el('p', { class: 'muted' }, t('pl.deleteText'))],
+    buttons: [{ label: t('cancel'), value: null }, { label: t('pl.delete'), value: 'yes', danger: true }],
+  });
+  if (ok !== 'yes') return;
+  try {
+    await apiCall('DELETE', `/Items/${pl.Id}`);
+    toast(t('pl.deleted', { name: pl.Name }));
+    loadSidebarPlaylists();
+    navigate('playlists');
+  } catch (e) {
+    toast(cleanError(e));
+  }
 }
 
 // ---------- views ----------
@@ -753,6 +918,7 @@ const views = {
             { class: 'actions' },
             el('button', { class: 'primary', onclick: () => playFrom(() => artistTracks(id)) }, t('btn.playAll')),
             el('button', { onclick: () => playFrom(() => artistTracks(id), { shuffle: true }) }, t('btn.shuffle')),
+            el('button', { title: t('mix.title'), onclick: () => startMix(artist) }, t('btn.mix')),
             heart(artist, 'icon big-heart'),
           ),
         ),
@@ -774,14 +940,27 @@ const views = {
     return el(
       'div',
       {},
-      el('h1', {}, t('nav.playlists')),
+      el('div', { class: 'title-row' }, el('h1', {}, t('nav.playlists')), el('button', { class: 'primary', onclick: () => createPlaylist([]) }, t('pl.new'))),
       grid(lists.map((p) => card(p, { onOpen: () => navigate('playlist', p.Id), onPlay: () => playFrom(() => playlistTracks(p.Id)) }))),
     );
   },
 
   async playlist(id) {
     const [pl, tracks] = await Promise.all([api(`/Users/${session.userId}/Items/${id}`), playlistTracks(id)]);
-    return el('div', {}, collectionHeader(pl, el('p', { class: 'muted' }, t('playlist')), tracks), trackTable(tracks, { numbers: 'position' }));
+    const remove = async (tr) => {
+      try {
+        await apiCall('DELETE', `/Playlists/${id}/Items`, { EntryIds: tr.PlaylistItemId });
+        toast(t('pl.removed', { name: tr.Name }));
+        render();
+      } catch (e) {
+        toast(cleanError(e));
+      }
+    };
+    const extra = [
+      el('button', { onclick: () => renamePlaylist(pl) }, t('pl.rename')),
+      el('button', { class: 'danger', onclick: () => deletePlaylist(pl) }, t('pl.delete')),
+    ];
+    return el('div', {}, collectionHeader(pl, el('p', { class: 'muted' }, t('playlist')), tracks, extra), trackTable(tracks, { numbers: 'position', onRemove: remove }));
   },
 
   async favorites() {
@@ -893,10 +1072,13 @@ const views = {
           el('h1', {}, cur.Name),
           el('p', {}, artistLinks(cur)),
           cur.AlbumId ? el('button', { class: 'link muted', onclick: () => navigate('album', cur.AlbumId) }, cur.Album || '') : null,
-          el('div', { class: 'actions' }, heart(cur, 'icon big-heart')),
+          el('div', { class: 'actions' },
+            el('button', { title: t('mix.title'), onclick: () => startMix(cur) }, t('btn.mix')),
+            el('button', { onclick: () => addToPlaylist([cur]) }, t('btn.toPlaylist')),
+            heart(cur, 'icon big-heart')),
         ),
       ),
-      el('div', { class: 'title-row' }, el('h2', {}, t('np.queue', { n: player.queue.length })), el('button', { onclick: () => player.shuffleQueue() }, t('btn.shuffle')), el('button', { onclick: () => player.clearQueue() }, t('np.clear'))),
+      el('div', { class: 'title-row' }, el('h2', {}, t('np.queue', { n: player.queue.length }), player.radio ? el('span', { class: 'badge' }, t('np.radio')) : null), el('button', { onclick: () => createPlaylist(player.queue) }, t('np.saveQueue')), el('button', { onclick: () => player.shuffleQueue() }, t('btn.shuffle')), el('button', { onclick: () => player.clearQueue() }, t('np.clear'))),
       el('div', { class: 'tracks' }, queue),
     );
   },
@@ -936,6 +1118,8 @@ function updateTrack() {
   updateMediaSession();
   updateTime();
   document.title = cur ? `${cur.Name} – ${artistsOf(cur)}` : 'Tonefin';
+  $('#tb-title').textContent = document.title;
+  sendThumbar();
 }
 
 let seeking = false;
@@ -954,10 +1138,25 @@ function updateTime() {
   }
 }
 
+/** Tells the main process what the taskbar thumbnail buttons should show. */
+function sendThumbar() {
+  jf.thumbar({
+    hasTrack: !!player.current,
+    playing: !!player.current && !player.audio.paused,
+    labels: { prev: t('bar.prev'), play: t('play'), pause: t('pause'), next: t('bar.next') },
+  });
+}
+jf.onMediaCommand((cmd) => {
+  if (cmd === 'prev') player.prev();
+  else if (cmd === 'next') player.next();
+  else if (cmd === 'toggle') player.toggle();
+});
+
 function updateState() {
   const playing = player.current && !player.audio.paused;
   $('#btn-play').textContent = playing ? '⏸' : '▶';
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = player.current ? (playing ? 'playing' : 'paused') : 'none';
+  sendThumbar();
 }
 
 function updateMediaSession() {
@@ -1082,7 +1281,7 @@ vol.addEventListener('input', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.target.matches('input, textarea')) return;
+  if (ignoreShortcut(e.target, document)) return;
   if (e.code === 'Space') {
     e.preventDefault();
     player.toggle();
@@ -1129,6 +1328,7 @@ jf.onResume(() => setTimeout(() => player.recover(), 3000));
 /** Redraws everything that shows text after the language was changed. */
 function languageChanged() {
   applyStaticTexts();
+  sendThumbar();
   paintRepeat();
   updateTrack();
   showReportStatus(lastReportStatus);

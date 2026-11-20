@@ -158,3 +158,31 @@ select:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
 .settings .option > span { display: flex; flex-direction: column; gap: 2px; }
 .artist-link { color: inherit; }
 .artist-link:hover { color: var(--text); text-decoration: underline; }
+
+/* 0.4.0: our own title bar. Windows draws the min/max/close buttons on the right (titleBarOverlay). */
+body { display: flex; flex-direction: column; }
+.titlebar { height: 36px; flex: none; display: flex; align-items: center; gap: 10px; padding-left: 14px;
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 12px);
+  background: var(--panel); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px;
+  -webkit-app-region: drag; user-select: none; }
+.titlebar img { width: 16px; height: 16px; }
+.tb-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#login, #app { flex: 1; min-height: 0; height: auto; }
+
+/* 0.4.0: dialogs, playlist actions, radio badge */
+button.danger { background: #5a1f24; border-color: #7a2a31; }
+button.danger:hover { border-color: #e5484d; }
+.badge { display: inline-block; margin-left: 10px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; vertical-align: middle;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
+.overlay { position: fixed; inset: 0; background: #0009; display: grid; place-items: center; z-index: 50; }
+.dialog { width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 80px); display: flex; flex-direction: column; gap: 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: 0 20px 60px #000a; }
+.dialog h2 { margin: 0; font-size: 17px; }
+.dialog input { width: 100%; }
+.dialog-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; max-height: 50vh; }
+.dialog-list button { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.dialog-list button:hover, .dialog-list button:focus { background: var(--panel-2); outline: none; }
+.dialog-list .new { color: var(--accent-2); }
+.dialog-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.track { grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 60px max-content; }
+.tracks.no-album .track { grid-template-columns: 44px minmax(0, 1fr) 0 60px max-content; }

@@ -44,9 +44,11 @@ class Player extends EventTarget {
 
   // ---- queue ----
 
-  playList(items, start = 0, { shuffle = false } = {}) {
+  /** radio: the queue is an Instant Mix that the app keeps topping up. */
+  playList(items, start = 0, { shuffle = false, radio = false } = {}) {
     const list = items.filter((i) => i.Type === 'Audio');
     if (!list.length) return;
+    this.radio = !!radio;
     let startItem = items[start] && items[start].Type === 'Audio' ? items[start] : list[0];
     this.queue = list.slice();
     this.shuffled = false;
@@ -84,6 +86,7 @@ class Player extends EventTarget {
   }
 
   clearQueue() {
+    this.radio = false;
     this._leaveTrack();
     this.audio.removeAttribute('src');
     this.audio.load();

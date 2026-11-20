@@ -35,6 +35,8 @@ const playlists = [
   { Id: 'pl2', Name: 'Film', Type: 'Playlist', MediaType: 'Video', ImageTags: {} },
 ];
 const favorites = new Set(['trk2']);
+const playlistEntries = { pl1: [{ id: 'trk3', entry: 'e1' }, { id: 'trk1', entry: 'e2' }] };
+let entrySeq = 2;
 
 function wav(seconds, freq) {
   const rate = 8000;
@@ -115,7 +117,43 @@ http
     const one = [album, artist, ...tracks, ...playlists].find((i) => p === `/Users/u1/Items/${i.Id}`);
     if (one) return json(res, withUserData(one));
     if (p === '/Artists/AlbumArtists' || p === '/Artists') return list([artist]);
-    if (p === '/Playlists/pl1/Items') return list([tracks[2], tracks[0]]);
+    // Playlists: contents, create, add, remove, rename, delete. InstantMix returns the other songs.
+    const plItems = p.match(/^\/Playlists\/(\w+)\/Items$/);
+    if (plItems) {
+      const entries = playlistEntries[plItems[1]] || (playlistEntries[plItems[1]] = []);
+      if (req.method === 'POST') {
+        for (const id of (q.Ids || '').split(',').filter(Boolean)) entries.push({ id, entry: `e${++entrySeq}` });
+        return res.writeHead(204).end();
+      }
+      if (req.method === 'DELETE') {
+        const drop = new Set((q.EntryIds || '').split(','));
+        playlistEntries[plItems[1]] = entries.filter((e) => !drop.has(e.entry));
+        return res.writeHead(204).end();
+      }
+      return list(entries.map((e) => ({ ...tracks.find((tr) => tr.Id === e.id), PlaylistItemId: e.entry })));
+    }
+    if (p === '/Playlists' && req.method === 'POST') {
+      const b = await body(req);
+      const id = `pl${playlists.length + 10}`;
+      playlists.push({ Id: id, Name: b.Name, Type: 'Playlist', MediaType: 'Audio', ImageTags: {} });
+      playlistEntries[id] = (b.Ids || []).map((tid) => ({ id: tid, entry: `e${++entrySeq}` }));
+      return json(res, { Id: id });
+    }
+    const plOne = p.match(/^\/Playlists\/(\w+)$/);
+    if (plOne && req.method === 'POST') {
+      const b = await body(req);
+      const pl = playlists.find((x) => x.Id === plOne[1]);
+      if (pl) pl.Name = b.Name;
+      return res.writeHead(204).end();
+    }
+    const delItem = p.match(/^\/Items\/(\w+)$/);
+    if (delItem && req.method === 'DELETE') {
+      const i = playlists.findIndex((x) => x.Id === delItem[1]);
+      if (i >= 0) playlists.splice(i, 1);
+      return res.writeHead(204).end();
+    }
+    const mix = p.match(/^\/Items\/(\w+)\/InstantMix$/);
+    if (mix) return list(tracks.filter((tr) => tr.Id !== mix[1]));
     const fav = p.match(/^\/UserFavoriteItems\/(\w+)$/);
     if (fav) {
       if (req.method === 'POST') favorites.add(fav[1]);

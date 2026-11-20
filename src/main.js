@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, powerMonitor, safeStorage, Menu, session, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage, powerMonitor, safeStorage, Menu, session, shell } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -129,6 +129,33 @@ function announce(reason) {
   reporter.kick(reason);
 }
 
+// ---- previous / play-pause / next buttons on the taskbar thumbnail (Windows) ----
+
+const thumbIcons = {};
+let thumbWarned = false;
+let thumbState = { hasTrack: false, playing: false, labels: { prev: 'Previous', play: 'Play', pause: 'Pause', next: 'Next' } };
+
+function thumbIcon(name) {
+  if (!thumbIcons[name]) thumbIcons[name] = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', `thumb-${name}.png`));
+  return thumbIcons[name];
+}
+
+function updateThumbar() {
+  if (process.platform !== 'win32' || !win || win.isDestroyed()) return;
+  const { hasTrack, playing, labels } = thumbState;
+  const send = (cmd) => () => win.webContents.send('media:command', cmd);
+  const flags = hasTrack ? [] : ['disabled'];
+  const ok = win.setThumbarButtons([
+    { tooltip: labels.prev, icon: thumbIcon('prev'), click: send('prev'), flags },
+    { tooltip: playing ? labels.pause : labels.play, icon: thumbIcon(playing ? 'pause' : 'play'), click: send('toggle'), flags },
+    { tooltip: labels.next, icon: thumbIcon('next'), click: send('next'), flags },
+  ]);
+  if (!ok && !thumbWarned) {
+    thumbWarned = true;
+    log('Windows did not accept the taskbar buttons');
+  }
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1280,
@@ -138,6 +165,9 @@ function createWindow() {
     backgroundColor: '#14161c',
     title: 'Tonefin',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+    // Draw our own dark title bar; Windows still draws the minimise/maximise/close buttons (and Snap layouts).
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#1b1e26', symbolColor: '#9aa1b2', height: 36 },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -155,6 +185,7 @@ function createWindow() {
     if (/^https?:/.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
+  win.once('ready-to-show', () => updateThumbar());
   win.webContents.on('render-process-gone', (_e, details) => {
     log(`window process gone (${details.reason}), stopping playback report`);
     reporter.stop();
@@ -253,6 +284,10 @@ app.whenReady().then(() => {
   ipcMain.handle('report:status', () => reporter.status);
   ipcMain.handle('log:open', () => shell.showItemInFolder(logFile));
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.on('thumbar:state', (_e, state) => {
+    thumbState = { ...thumbState, ...state };
+    updateThumbar();
+  });
 
   // Asks GitHub for the latest release. Nothing about the user or the library is sent.
   ipcMain.handle('update:check', async () => {

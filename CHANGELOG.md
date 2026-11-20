@@ -2,6 +2,22 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.4.0
+
+🇬🇧
+- Dark title bar that blends in with the app and shows what is playing. Windows' own minimise, maximise and close buttons (and Snap layouts) are kept.
+- Previous, play/pause and next buttons on Tonefin's taskbar thumbnail
+- Instant Mix: start an endless radio from a song, album, artist, playlist or what is playing. More similar songs are added before the queue runs out.
+- Playlists from Tonefin: create playlists, add songs (also a whole album or the current song), remove songs, rename and delete playlists, and save the queue as a playlist
+- Space no longer starts or pauses music while a dialog is open
+
+🇩🇰
+- Mørk titellinje, der flyder sammen med appen og viser, hvad der spiller. Windows' egne knapper til minimér, maksimér og luk (og Snap-layouts) er bevaret.
+- Knapper til forrige, afspil/pause og næste på Tonefins miniaturebillede i proceslinjen
+- Instant Mix: start en uendelig radio ud fra en sang, et album, en kunstner, en playliste eller det, der spiller. Flere lignende sange tilføjes, før køen løber tør.
+- Playlister fra Tonefin: opret playlister, tilføj sange (også et helt album eller det aktuelle nummer), fjern sange, omdøb og slet playlister, og gem køen som playliste
+- Mellemrumstasten starter eller pauser ikke længere musikken, mens en dialog er åben
+
 ## 0.3.1
 
 🇬🇧

@@ -20,4 +20,6 @@ contextBridge.exposeInMainWorld('jf', {
   openRelease: (url) => ipcRenderer.invoke('update:open', url),
   onReportStatus: (fn) => ipcRenderer.on('report:status', (_e, s) => fn(s)),
   onResume: (fn) => ipcRenderer.on('power:resume', () => fn()),
+  thumbar: (state) => ipcRenderer.send('thumbar:state', state),
+  onMediaCommand: (fn) => ipcRenderer.on('media:command', (_e, cmd) => fn(cmd)),
 });
