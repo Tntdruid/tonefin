@@ -2,6 +2,14 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.4.1
+
+🇬🇧
+- The exe is now also built and tested on GitHub (GitHub Actions) for every release, as a first step towards signed releases. The app itself is unchanged.
+
+🇩🇰
+- Exe'en bygges og testes nu også på GitHub (GitHub Actions) ved hver release, som et første skridt mod signerede udgivelser. Selve appen er uændret.
+
 ## 0.4.0
 
 🇬🇧
