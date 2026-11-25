@@ -1,5 +1,5 @@
 'use strict';
-/* global jf, Player, TICKS_PER_SECOND, t, errorText, applyStaticTexts, setLanguage, i18n, ignoreShortcut */
+/* global jf, Player, RemoteAudio, TICKS_PER_SECOND, t, errorText, applyStaticTexts, setLanguage, i18n, ignoreShortcut */
 
 const $ = (sel) => document.querySelector(sel);
 const player = new Player();
@@ -252,7 +252,7 @@ function startApp(s) {
 // ---------- remember the queue ----------
 
 const SAVED_FIELDS = ['Id', 'Name', 'Type', 'Album', 'AlbumId', 'AlbumArtist', 'Artists', 'RunTimeTicks', 'IndexNumber',
-  'ParentIndexNumber', 'ImageTags', 'AlbumPrimaryImageTag', 'NormalizationGain', 'ArtistItems', 'AlbumArtists'];
+  'ParentIndexNumber', 'ImageTags', 'AlbumPrimaryImageTag', 'NormalizationGain', 'ArtistItems', 'AlbumArtists', 'Container'];
 const MAX_SAVED = 1000;
 
 function queueKey() {
@@ -1273,6 +1273,8 @@ vol.value = savedVol;
 player.setVolume(savedVol);
 vol.addEventListener('input', () => {
   player.setVolume(Number(vol.value));
+  if (player.audio.isRemote) return; // the network player keeps its own volume
+  savedVol = Number(vol.value);
   try {
     localStorage.setItem('volume', vol.value);
   } catch {
@@ -1290,6 +1292,81 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('mouseup', (e) => {
   if (e.button === 3) back();
 });
+
+// ---------- where the music plays: this computer or a network player (DLNA) ----------
+
+player.describe = (item) => ({ title: item.Name, artist: artistsOf(item), album: item.Album || '', cover: imageUrl(item, 500) });
+
+function paintOutput() {
+  const remote = player.audio.isRemote ? player.audio.device : null;
+  const btn = $('#btn-output');
+  btn.classList.toggle('remote', !!remote);
+  btn.title = t('out.button');
+  btn.querySelector('.output-icon').textContent = remote ? '📻' : '🔊';
+  $('#output-name').textContent = remote ? remote.name : '';
+}
+
+async function selectOutput(device) {
+  try {
+    if (!device) {
+      await jf.dlna.select(null);
+      player.setOutput(null);
+      vol.value = savedVol;
+      player.setVolume(savedVol);
+      toast(t('out.local'));
+    } else {
+      const chosen = await jf.dlna.select(device.id);
+      const remote = new RemoteAudio(chosen);
+      // Start from the device's own volume rather than blasting it with ours.
+      const v = await jf.dlna.getVolume().catch(() => null);
+      player.setOutput(remote);
+      if (typeof v === 'number') {
+        vol.value = v;
+        player.volumePct = v;
+      }
+      toast(t('out.switched', { name: chosen.name }));
+    }
+  } catch (e) {
+    toast(t('out.failed', { name: device ? device.name : t('out.this'), e: cleanError(e) }));
+  }
+  paintOutput();
+}
+
+async function chooseOutput() {
+  const list = el('div', { class: 'dialog-list' });
+  const currentId = player.audio.isRemote ? player.audio.device.id : null;
+  const pick = (value) => list.closest('.overlay').close(value);
+  const draw = (devices, searching) => {
+    list.replaceChildren(...[
+      el('button', { class: currentId ? '' : 'current', onclick: () => pick({ local: true }) }, `🔊 ${t('out.this')}`),
+      ...devices.map((d) => el('button', { class: d.id === currentId ? 'current' : '', onclick: () => pick(d) },
+        `📻 ${d.name}`, d.model && d.model !== d.name ? el('span', { class: 'sub' }, d.model) : null)),
+      searching ? el('div', { class: 'muted small loading-line' }, t('out.searching')) : null,
+      !searching && !devices.length ? el('p', { class: 'muted small' }, t('out.none')) : null,
+    ].filter(Boolean));
+  };
+  const search = () => {
+    draw([], true);
+    jf.dlna.discover().then((devices) => list.isConnected && draw(devices, false)).catch(() => list.isConnected && draw([], false));
+  };
+  search();
+  const choice = await dialog({
+    title: t('out.title'),
+    body: [list],
+    buttons: [{ label: t('out.rescan'), value: 'rescan' }, { label: t('cancel'), value: null }],
+  });
+  if (choice === 'rescan') return chooseOutput();
+  if (!choice) return;
+  if (choice.local) {
+    if (currentId) await selectOutput(null);
+  } else if (choice.id !== currentId) {
+    await selectOutput(choice);
+  }
+}
+
+$('#btn-output').addEventListener('click', chooseOutput);
+player.addEventListener('output', paintOutput);
+paintOutput();
 
 // ---------- reporting status, sleep and network ----------
 
@@ -1329,6 +1406,7 @@ jf.onResume(() => setTimeout(() => player.recover(), 3000));
 function languageChanged() {
   applyStaticTexts();
   sendThumbar();
+  paintOutput();
   paintRepeat();
   updateTrack();
   showReportStatus(lastReportStatus);

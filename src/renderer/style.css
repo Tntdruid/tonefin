@@ -186,3 +186,11 @@ button.danger:hover { border-color: #e5484d; }
 .dialog-buttons { display: flex; justify-content: flex-end; gap: 8px; }
 .track { grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 60px max-content; }
 .tracks.no-album .track { grid-template-columns: 44px minmax(0, 1fr) 0 60px max-content; }
+
+/* 0.5.0: choosing where the music plays */
+.output-btn { display: flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 6px; color: var(--muted); max-width: 180px; }
+.output-btn:hover { color: var(--text); }
+.output-btn.remote { color: var(--accent-2); }
+.output-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dialog-list button .sub { display: block; font-size: 11px; color: var(--muted); }
+.dialog-list button.current { color: var(--accent-2); font-weight: 600; }

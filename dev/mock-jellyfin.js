@@ -28,6 +28,7 @@ const tracks = [1, 2, 3].map((n) => ({
   ParentIndexNumber: 1,
   RunTimeTicks: 12 * TICKS,
   NormalizationGain: [-6, -12, 0][n - 1],
+  Container: n === 1 ? 'flac' : 'mp3',
 }));
 const artist = { Id: 'art1', Name: 'Testkunstner', Type: 'MusicArtist', ImageTags: {} };
 const playlists = [

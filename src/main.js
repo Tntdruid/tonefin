@@ -7,6 +7,7 @@ const { JellyfinClient, normalizeServer } = require('./jellyfin');
 const { Reporter } = require('./reporter');
 const { Store } = require('./store');
 const { isNewer } = require('./version');
+const dlna = require('./dlna');
 
 const RELEASES_URL = process.env.JMP_UPDATE_URL || 'https://api.github.com/repos/Tntdruid/tonefin/releases/latest';
 const RELEASE_PAGE = /^https:\/\/github\.com\/Tntdruid\/tonefin\/releases\//;
@@ -86,6 +87,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let win = null;
+let renderer = null; // the network player (DLNA) we play on, or null for this computer
 let store = null;
 let client = null;
 let reporter = null;
@@ -284,6 +286,55 @@ app.whenReady().then(() => {
   ipcMain.handle('report:status', () => reporter.status);
   ipcMain.handle('log:open', () => shell.showItemInFolder(logFile));
   ipcMain.handle('app:version', () => app.getVersion());
+
+  // ---- playing on network players (DLNA) ----
+  const renderers = new Map(); // id -> device, filled by discovery
+  const need = () => {
+    if (!renderer) throw new Error('E_DLNA_NONE');
+    return renderer;
+  };
+  ipcMain.handle('dlna:discover', async () => {
+    const extra = (process.env.JMP_EXTRA_RENDERERS || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const found = await dlna.discover(3000, extra);
+    for (const d of found) renderers.set(d.id, d);
+    log(`network players found: ${found.map((d) => `${d.name} (${d.model})`).join(', ') || 'none'}`);
+    return found.map(({ id, name, model, sinkTypes }) => ({ id, name, model, sinkTypes }));
+  });
+  ipcMain.handle('dlna:select', async (_e, id) => {
+    if (renderer) await renderer.stop().catch(() => {});
+    renderer = id && renderers.has(id) ? new dlna.Renderer(renderers.get(id)) : null;
+    log(renderer ? `playing on ${renderer.d.name}` : 'playing on this computer');
+    return renderer ? { id: renderer.d.id, name: renderer.d.name, sinkTypes: renderer.d.sinkTypes } : null;
+  });
+  // Builds the stream URL the renderer fetches from Jellyfin: the original file if it can play the format,
+  // otherwise MP3 made by Jellyfin.
+  ipcMain.handle('dlna:load', async (_e, media) => {
+    const r = need();
+    if (!client || !client.token) throw new Error('E_NOT_LOGGED_IN');
+    const fmt = media.transcode ? dlna.pickFormat('', r.d.sinkTypes) : dlna.pickFormat(media.container, r.d.sinkTypes);
+    const q = new URLSearchParams({
+      ApiKey: client.token,
+      DeviceId: store.deviceId,
+      PlaySessionId: media.playSessionId || '',
+      MediaSourceId: media.itemId,
+    });
+    if (fmt.direct) q.set('static', 'true');
+    else {
+      q.set('AudioCodec', 'mp3');
+      q.set('AudioBitrate', '320000');
+    }
+    const url = `${client.server}/Audio/${encodeURIComponent(media.itemId)}/stream.${fmt.container}?${q}`;
+    await r.load({ url, mime: fmt.mime, title: media.title, artist: media.artist, album: media.album, cover: media.cover, durationSec: media.durationSec });
+    log(`${r.d.name}: ${media.title} (${fmt.direct ? `original ${fmt.container}` : 'mp3 from Jellyfin'})`);
+    return { direct: fmt.direct };
+  });
+  ipcMain.handle('dlna:play', () => need().play());
+  ipcMain.handle('dlna:pause', () => need().pause());
+  ipcMain.handle('dlna:stop', () => need().stop());
+  ipcMain.handle('dlna:seek', (_e, sec) => need().seek(sec));
+  ipcMain.handle('dlna:volume', (_e, pct) => need().setVolume(pct));
+  ipcMain.handle('dlna:getVolume', () => need().getVolume());
+  ipcMain.handle('dlna:status', () => need().status());
   ipcMain.on('thumbar:state', (_e, state) => {
     thumbState = { ...thumbState, ...state };
     updateThumbar();
@@ -319,12 +370,13 @@ app.on('second-instance', () => {
 
 let quitting = false;
 app.on('before-quit', (e) => {
-  if (quitting || !reporter || (!reporter.current && !reporter.pendingStops.length)) return;
-  // Tell Jellyfin that playback stopped before exiting, but never hang on it.
+  if (quitting || !reporter || (!reporter.current && !reporter.pendingStops.length && !renderer)) return;
+  // Tell Jellyfin that playback stopped (and stop the network player) before exiting, but never hang on it.
   e.preventDefault();
   quitting = true;
   log('closing, reporting stop');
-  Promise.race([reporter.stop(), new Promise((r) => setTimeout(r, 3000))]).finally(() => app.quit());
+  const stopRenderer = renderer ? renderer.stop().catch(() => {}) : null;
+  Promise.race([Promise.all([reporter.stop(), stopRenderer]), new Promise((r) => setTimeout(r, 3000))]).finally(() => app.quit());
 });
 
 app.on('window-all-closed', () => app.quit());

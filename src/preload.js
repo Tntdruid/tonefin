@@ -21,5 +21,17 @@ contextBridge.exposeInMainWorld('jf', {
   onReportStatus: (fn) => ipcRenderer.on('report:status', (_e, s) => fn(s)),
   onResume: (fn) => ipcRenderer.on('power:resume', () => fn()),
   thumbar: (state) => ipcRenderer.send('thumbar:state', state),
+  dlna: {
+    discover: () => ipcRenderer.invoke('dlna:discover'),
+    select: (id) => ipcRenderer.invoke('dlna:select', id),
+    load: (media) => ipcRenderer.invoke('dlna:load', media),
+    play: () => ipcRenderer.invoke('dlna:play'),
+    pause: () => ipcRenderer.invoke('dlna:pause'),
+    stop: () => ipcRenderer.invoke('dlna:stop'),
+    seek: (sec) => ipcRenderer.invoke('dlna:seek', sec),
+    volume: (pct) => ipcRenderer.invoke('dlna:volume', pct),
+    getVolume: () => ipcRenderer.invoke('dlna:getVolume'),
+    status: () => ipcRenderer.invoke('dlna:status'),
+  },
   onMediaCommand: (fn) => ipcRenderer.on('media:command', (_e, cmd) => fn(cmd)),
 });

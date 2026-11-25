@@ -2,6 +2,18 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.5.0
+
+🇬🇧
+- Play on network players: the speaker button next to the volume slider finds DLNA/UPnP players on your network (receivers such as Denon, Marantz and Yamaha, TVs and speakers) and plays there. The player fetches the music straight from Jellyfin, in the original quality when it supports the format (e.g. FLAC), otherwise as MP3 made by Jellyfin.
+- Tonefin keeps reporting to Jellyfin while playing on a network player, and the queue, next/previous, pause, seeking, repeat, media keys and taskbar buttons work as usual. Switching device continues the song where it was, as one continuous listen.
+- The volume slider controls the network player's own volume, and Tonefin never changes it unless you move the slider. Closing Tonefin stops the network player.
+
+🇩🇰
+- Afspil på netværksafspillere: højttalerknappen ved lydstyrken finder DLNA/UPnP-afspillere på dit netværk (receivere som Denon, Marantz og Yamaha, tv og højttalere) og spiller der. Afspilleren henter musikken direkte fra Jellyfin, i original kvalitet når den kan formatet (fx FLAC), ellers som MP3 lavet af Jellyfin.
+- Tonefin bliver ved med at rapportere til Jellyfin, mens der spilles på en netværksafspiller, og kø, næste/forrige, pause, spoling, gentag, medietaster og proceslinjeknapper virker som normalt. Et skift af enhed fortsætter sangen, hvor den var, som én sammenhængende lytning.
+- Lydstyrkeskyderen styrer netværksafspillerens egen lydstyrke, og Tonefin ændrer den aldrig, medmindre du flytter skyderen. Når Tonefin lukkes, stopper netværksafspilleren.
+
 ## 0.4.1
 
 🇬🇧

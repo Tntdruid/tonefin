@@ -31,7 +31,9 @@ class Player extends EventTarget {
     this.gainDb = 0;
     this.volumePct = 80;
     this.albumGain = null; // async (albumId) => dB or null, set by the app
-    this._wire();
+    this.local = this.audio; // this computer's <audio>; this.audio may instead be a RemoteAudio (network player)
+    this.describe = (item) => ({ title: item.Name, artist: '', album: '', cover: null }); // set by the app
+    this._wire(this.audio);
   }
 
   get current() {
@@ -159,6 +161,8 @@ class Player extends EventTarget {
    */
   setVolume(v) {
     this.volumePct = Math.min(100, Math.max(0, Number(v) || 0));
+    // A network player only gets a volume when the user moves the slider, never automatically.
+    if (this.audio.isRemote) return this.audio.setVolumePct(this.volumePct);
     this._applyVolume();
   }
 
@@ -169,6 +173,7 @@ class Player extends EventTarget {
   }
 
   _applyVolume() {
+    if (this.audio.isRemote) return; // see setVolume
     const base = Math.pow(this.volumePct / 100, 3);
     const gain = this.normalization === 'off' ? 0 : this.gainDb;
     // The <audio> element can only turn down, so a positive gain (a quiet track) is capped at the slider volume.
@@ -195,6 +200,36 @@ class Player extends EventTarget {
     const d = this.audio.duration;
     if (isFinite(d) && d > 0) return d;
     return this.current && this.current.RunTimeTicks ? this.current.RunTimeTicks / TICKS_PER_SECOND : 0;
+  }
+
+  /**
+   * Switches between this computer and a network player (a RemoteAudio), continuing the song where it was.
+   * The play session stays the same, so Jellyfin sees one continuous listen.
+   */
+  setOutput(target) {
+    const next = target || this.local;
+    if (next === this.audio) return;
+    const old = this.audio;
+    const pos = old.currentTime || 0;
+    const wasPlaying = !!this.current && !old.paused;
+    this.audio = next;
+    if (!next._wired) {
+      this._wire(next);
+      next._wired = true;
+    }
+    this.local._wired = true;
+    old.pause();
+    if (old.isRemote) old.dispose(true);
+    else {
+      old.removeAttribute('src');
+      old.load();
+    }
+    this.playMethod = 'DirectPlay';
+    // Never push our volume to a network player when switching: it keeps its own (the app reads it).
+    this._applyVolume();
+    if (this.current) this._load(pos, wasPlaying);
+    this._emit('output');
+    this._emit('state');
   }
 
   /** After sleep or a network change: if the stream died, start it again where it was. */
@@ -233,6 +268,18 @@ class Player extends EventTarget {
     clearTimeout(this.retryTimer);
     const item = this.current;
     const a = this.audio;
+    if (a.isRemote) {
+      a.loadItem({
+        itemId: item.Id,
+        container: item.Container,
+        durationSec: item.RunTimeTicks ? item.RunTimeTicks / TICKS_PER_SECOND : 0,
+        playSessionId: this.playSessionId,
+        transcode: this.playMethod === 'Transcode',
+        startAt,
+        ...this.describe(item),
+      }, autoplay);
+      return;
+    }
     a.src = this._streamUrl(item);
     if (startAt > 0) {
       const seekOnce = () => {
@@ -259,7 +306,7 @@ class Player extends EventTarget {
     return {
       itemId: item.Id,
       playSessionId: this.playSessionId,
-      playMethod: this.playMethod,
+      playMethod: this.audio.isRemote ? this.audio.playMethod : this.playMethod,
       runTimeTicks: item.RunTimeTicks || 0,
       positionTicks: this._ticks(this.audio.currentTime),
       isPaused: this.audio.paused,
@@ -277,9 +324,10 @@ class Player extends EventTarget {
     jf.playerUpdate(this._state(event));
   }
 
-  _wire() {
-    const a = this.audio;
-    a.addEventListener('playing', () => {
+  _wire(a) {
+    // Only react to the output in use (this computer or a network player).
+    const on = (type, fn) => a.addEventListener(type, (ev) => a === this.audio && fn(ev));
+    on('playing', () => {
       this.errors = 0;
       if (!this.reported) {
         this.reported = true;
@@ -289,21 +337,21 @@ class Player extends EventTarget {
       }
       this._emit('state');
     });
-    a.addEventListener('pause', () => {
+    on('pause', () => {
       if (!a.ended) this._report('Pause');
       this._emit('state');
     });
-    a.addEventListener('seeked', () => this._report('TimeUpdate'));
+    on('seeked', () => this._report('TimeUpdate'));
     let volTimer = null;
-    a.addEventListener('volumechange', () => {
+    on('volumechange', () => {
       clearTimeout(volTimer);
       volTimer = setTimeout(() => this._report('VolumeChange'), 400);
     });
-    a.addEventListener('timeupdate', () => {
+    on('timeupdate', () => {
       if (Date.now() - this.lastUpdate >= 1000) this._report();
       this._emit('time');
     });
-    a.addEventListener('ended', () => {
+    on('ended', () => {
       const item = this.current;
       if (this.reported) {
         const end = item && item.RunTimeTicks ? item.RunTimeTicks : this._ticks(a.duration);
@@ -319,7 +367,7 @@ class Player extends EventTarget {
         this._emit('queueend', item);
       }
     });
-    a.addEventListener('error', () => {
+    on('error', () => {
       const err = a.error;
       if (!err || !this.current || !a.getAttribute('src')) return;
       const pos = a.currentTime || 0;
