@@ -2,6 +2,16 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.6.0
+
+🇬🇧
+- Self-update: when a new version is out, "Update now" downloads it from Tonefin's GitHub release, checks its SHA-256 against the checksum GitHub publishes, starts it and closes the old version. Your queue, login and settings are kept, and the old exe is removed. A file that doesn't match the checksum is deleted and never started.
+- Self-update works in the portable exe. When running from source, the button opens the release page as before.
+
+🇩🇰
+- Selvopdatering: når der er en ny version, henter "Opdatér nu" den fra Tonefins GitHub-release, tjekker dens SHA-256 mod den checksum, GitHub oplyser, starter den og lukker den gamle version. Din kø, dit login og dine indstillinger bevares, og den gamle exe fjernes. En fil, der ikke passer med checksummen, slettes og startes aldrig.
+- Selvopdatering virker i den portable exe. Kører appen fra kildekoden, åbner knappen release-siden som før.
+
 ## 0.5.0
 
 🇬🇧

@@ -41,7 +41,7 @@ test('"auto" follows the Windows language', () => {
 
 test('every error code thrown by the main process has a text in both languages', () => {
   const codes = new Set();
-  for (const f of ['main.js', 'jellyfin.js']) {
+  for (const f of ['main.js', 'jellyfin.js', 'updater.js', 'dlna.js']) {
     for (const m of fs.readFileSync(path.join(src, f), 'utf8').matchAll(/\b(E_[A-Z_]+)\b/g)) codes.add(m[1]);
   }
   assert.ok(codes.size >= 8, `found ${codes.size} codes`);

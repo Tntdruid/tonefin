@@ -8,6 +8,8 @@ const { Reporter } = require('./reporter');
 const { Store } = require('./store');
 const { isNewer } = require('./version');
 const dlna = require('./dlna');
+const updater = require('./updater');
+const { spawn } = require('child_process');
 
 const RELEASES_URL = process.env.JMP_UPDATE_URL || 'https://api.github.com/repos/Tntdruid/tonefin/releases/latest';
 const RELEASE_PAGE = /^https:\/\/github\.com\/Tntdruid\/tonefin\/releases\//;
@@ -80,6 +82,9 @@ function migrateOldData() {
   }
 }
 const migratedFrom = migrateOldData();
+
+// After a self-update the new version is started by the old one: wait until the old one has quit.
+if (process.env.TONEFIN_WAIT_FOR_PID) updater.waitForExitSync(Number(process.env.TONEFIN_WAIT_FOR_PID));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -352,7 +357,37 @@ app.whenReady().then(() => {
     const current = app.getVersion();
     const newer = isNewer(latest, current);
     if (newer) log(`update available: ${latest} (running ${current})`);
-    return { current, latest, newer, url: release.html_url };
+    latestAsset = newer ? updater.pickAsset(release) : null;
+    // Self-update works for the portable exe (not when running from source).
+    const canInstall = !!(newer && latestAsset && latestAsset.sha256 && process.env.PORTABLE_EXECUTABLE_FILE);
+    return { current, latest, newer, url: release.html_url, canInstall };
+  });
+
+  // Downloads the new exe next to this one, checks it, starts it and quits.
+  let latestAsset = null;
+  let installing = false;
+  ipcMain.handle('update:install', async (e) => {
+    const exe = process.env.PORTABLE_EXECUTABLE_FILE;
+    if (!exe) throw new Error('E_UPDATE_NOT_PORTABLE');
+    if (installing) return;
+    installing = true;
+    try {
+      const extraPrefix = process.env.JMP_UPDATE_URL ? new URL(process.env.JMP_UPDATE_URL).origin + '/' : null;
+      log(`downloading ${latestAsset && latestAsset.name}`);
+      const file = await updater.download(latestAsset, path.dirname(exe), {
+        extraPrefix,
+        onProgress: (pct) => !e.sender.isDestroyed() && e.sender.send('update:progress', pct),
+      });
+      log(`downloaded and verified ${path.basename(file)}, starting it`);
+      const env = { ...process.env, TONEFIN_WAIT_FOR_PID: String(process.pid), TONEFIN_REPLACES: exe };
+      for (const k of Object.keys(env)) if (k.startsWith('PORTABLE_EXECUTABLE')) delete env[k];
+      spawn(file, [], { detached: true, stdio: 'ignore', cwd: path.dirname(file), env }).unref();
+      setTimeout(() => app.quit(), 300);
+    } catch (err) {
+      installing = false;
+      log(`update failed: ${err.message}`);
+      throw err;
+    }
   });
   ipcMain.handle('update:open', (_e, url) => {
     if (RELEASE_PAGE.test(String(url))) shell.openExternal(url);
@@ -360,6 +395,9 @@ app.whenReady().then(() => {
 
   Menu.setApplicationMenu(null);
   createWindow();
+
+  // The version we replaced (see update:install) can be deleted once it has exited.
+  if (process.env.TONEFIN_REPLACES) updater.removeOld(process.env.TONEFIN_REPLACES, process.env.PORTABLE_EXECUTABLE_FILE, log);
 });
 
 app.on('second-instance', () => {

@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('jf', {
   appVersion: () => ipcRenderer.invoke('app:version'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),
   openRelease: (url) => ipcRenderer.invoke('update:open', url),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  onUpdateProgress: (fn) => ipcRenderer.on('update:progress', (_e, pct) => fn(pct)),
   onReportStatus: (fn) => ipcRenderer.on('report:status', (_e, s) => fn(s)),
   onResume: (fn) => ipcRenderer.on('power:resume', () => fn()),
   thumbar: (state) => ipcRenderer.send('thumbar:state', state),

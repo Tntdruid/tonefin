@@ -81,7 +81,21 @@ http
     // Act like a server plugin: heart a song, or create a playlist, behind the client's back.
     if (p === '/__fav') return json(res, favorites.add(q.id).has(q.id));
     if (p === '/__addplaylist') return json(res, playlists.push({ Id: 'pl3', Name: q.name || 'Testkunstner', Type: 'Playlist', MediaType: 'Audio', ImageTags: {} }));
-    if (p === '/__release') return json(res, { tag_name: 'v9.9.9', html_url: 'https://github.com/Tntdruid/tonefin/releases/tag/v9.9.9' });
+    // Pretend release 9.9.9. With MOCK_ASSET=<path to an exe> it also offers that file for self-update.
+    if (p === '/__release') {
+      const rel = { tag_name: 'v9.9.9', html_url: 'https://github.com/Tntdruid/tonefin/releases/tag/v9.9.9', assets: [] };
+      if (process.env.MOCK_ASSET) {
+        const data = require('fs').readFileSync(process.env.MOCK_ASSET);
+        const digest = 'sha256:' + require('crypto').createHash('sha256').update(data).digest('hex');
+        rel.assets.push({ name: 'Tonefin-9.9.9-portable.exe', browser_download_url: `http://localhost:${port}/__asset`, size: data.length, digest });
+      }
+      return json(res, rel);
+    }
+    if (p === '/__asset' && process.env.MOCK_ASSET) {
+      const data = require('fs').readFileSync(process.env.MOCK_ASSET);
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': data.length });
+      return res.end(data);
+    }
     if (p === '/Genres') return json(res, { Items: [{ Id: 'g1', Name: 'Rock' }, { Id: 'g2', Name: 'Jazz' }], TotalRecordCount: 2 });
     if (p === '/__approve') return json(res, (quickApproved = true));
     if (p === '/QuickConnect/Enabled') return json(res, true);

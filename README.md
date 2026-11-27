@@ -23,7 +23,7 @@ Tonefin is a small music player for Windows that plays music from a Jellyfin ser
 - Home page with recently added albums and recently and most played songs; albums can be sorted and filtered by genre
 - Repeat (queue or song), and the queue and position are remembered between restarts
 - Equal loudness using Jellyfin's audio normalization, per song or per album
-- Tells you when a new version is out on GitHub
+- Updates itself: downloads the new version from GitHub, checks its SHA-256 and restarts
 - Instant Mix: an endless radio based on a song, album, artist or playlist
 - Create playlists, add and remove songs, rename and delete playlists, or save the queue as a playlist
 - Dark title bar that blends in with the app, and previous / play / next buttons on the taskbar thumbnail
@@ -73,7 +73,7 @@ Tonefin er en lille musikafspiller til Windows, der spiller musik fra en Jellyfi
 - Forside med senest tilføjede albums og senest og mest afspillede sange; albums kan sorteres og filtreres efter genre
 - Gentag (kø eller nummer), og køen og positionen huskes mellem genstarter
 - Ens lydstyrke med Jellyfins lydstyrkenormalisering, pr. nummer eller pr. album
-- Fortæller, når der er en ny version på GitHub
+- Opdaterer sig selv: henter den nye version fra GitHub, tjekker dens SHA-256 og genstarter
 - Instant Mix: en uendelig radio ud fra en sang, et album, en kunstner eller en playliste
 - Opret playlister, tilføj og fjern sange, omdøb og slet playlister, eller gem køen som playliste
 - Mørk titellinje, der flyder sammen med appen, og knapper til forrige / afspil / næste på miniaturebilledet i proceslinjen

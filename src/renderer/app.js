@@ -319,14 +319,43 @@ async function checkForUpdate(manual) {
     updateInfo = await jf.checkUpdate();
     const banner = $('#update-banner');
     banner.classList.toggle('hidden', !updateInfo.newer);
-    banner.textContent = t('upd.banner', { v: updateInfo.latest });
+    if (!updating) banner.textContent = t(updateInfo.canInstall ? 'upd.bannerInstall' : 'upd.banner', { v: updateInfo.latest });
     if (manual) toast(updateInfo.newer ? t('upd.ready', { v: updateInfo.latest }) : t('upd.latest', { v: updateInfo.current }));
   } catch (e) {
     if (manual) toast(t('upd.failed', { e: cleanError(e) }));
   }
   if (current && current.view === 'settings') render();
 }
-$('#update-banner').addEventListener('click', () => updateInfo && jf.openRelease(updateInfo.url));
+/** Self-update (portable exe): download, verify and restart. Otherwise open the release page. */
+let updating = false;
+async function installUpdate() {
+  if (!updateInfo || updating) return;
+  if (!updateInfo.canInstall) return jf.openRelease(updateInfo.url);
+  const ok = await dialog({
+    title: t('upd.confirmTitle', { v: updateInfo.latest }),
+    body: [el('p', { class: 'muted' }, t('upd.confirmText'))],
+    buttons: [{ label: t('cancel'), value: null }, { label: t('upd.install'), value: 'yes', primary: true }],
+  });
+  if (ok !== 'yes') return;
+  updating = true;
+  const banner = $('#update-banner');
+  banner.disabled = true;
+  banner.textContent = t('upd.downloading', { pct: 0 });
+  try {
+    saveQueue();
+    await jf.installUpdate();
+    banner.textContent = t('upd.restarting');
+  } catch (e) {
+    updating = false;
+    banner.disabled = false;
+    banner.textContent = t('upd.bannerInstall', { v: updateInfo.latest });
+    toast(t('upd.installFailed', { e: cleanError(e) }));
+  }
+}
+jf.onUpdateProgress((pct) => {
+  if (updating) $('#update-banner').textContent = t('upd.downloading', { pct });
+});
+$('#update-banner').addEventListener('click', installUpdate);
 setInterval(() => {
   if (session && prefs.get('autoUpdateCheck', true)) checkForUpdate(false);
 }, 6 * 60 * 60 * 1000);
@@ -881,7 +910,9 @@ const views = {
       el('label', { class: 'option' }, auto, el('span', {}, el('b', {}, t('set.autoUpdate')), el('span', { class: 'muted small' }, t('set.autoUpdateHint')))),
       el('p', { class: 'actions' },
         el('button', { onclick: () => checkForUpdate(true) }, t('set.checkNow')),
-        updateInfo && updateInfo.newer ? el('button', { class: 'primary', onclick: () => jf.openRelease(updateInfo.url) }, t('set.download', { v: updateInfo.latest })) : null),
+        updateInfo && updateInfo.newer
+          ? el('button', { class: 'primary', onclick: installUpdate }, t(updateInfo.canInstall ? 'upd.installVersion' : 'set.download', { v: updateInfo.latest }))
+          : null),
       el('p', { class: 'muted small' }, `Tonefin ${version}`),
     );
   },
@@ -1410,7 +1441,7 @@ function languageChanged() {
   paintRepeat();
   updateTrack();
   showReportStatus(lastReportStatus);
-  if (updateInfo) $('#update-banner').textContent = t('upd.banner', { v: updateInfo.latest });
+  if (updateInfo && !updating) $('#update-banner').textContent = t(updateInfo.canInstall ? 'upd.bannerInstall' : 'upd.banner', { v: updateInfo.latest });
   if (session) {
     loadSidebarPlaylists();
     render();
